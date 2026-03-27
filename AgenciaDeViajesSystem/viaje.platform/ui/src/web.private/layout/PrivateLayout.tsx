@@ -1,6 +1,6 @@
 import { type JSX } from "react";
 import { Outlet }             from "react-router";
-import FooterPublic           from "./FooterPrivate.tsx";
+import FooterPublic                    from "../../web.public/layout/FooterPublic.tsx";
 import Nav                    from "../../web.public/layout/Nav";
 const PublicLayout = (): JSX.Element => {
     return (

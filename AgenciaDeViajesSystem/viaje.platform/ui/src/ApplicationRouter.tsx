@@ -30,7 +30,9 @@ const ApplicationRouter = (): JSX.Element => {
                 <Route element={<PublicLayout/>}>
                     <Route path={"/"} element={<HomePage/>}/>
                     <Route path={"/nosotros"} element={<AboutUSPage/>}/>
-                    <Route path={"/destinos"} element={<DestinosPage/>}/>
+                    <Route path={"/destinos"} element={<DestinosPage/>}/>   
+                    <Route path={"/experiencias"} element={<DestinosPage/>}/>
+
                 </Route>
 
                 <Route element={<PrivateLayout/>}>

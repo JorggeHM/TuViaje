@@ -18,10 +18,10 @@ const Footer: React.FC = () => {
           <div className="space-y-3">
             <h4 className="text-sm font-semibold uppercase tracking-widest text-gray-400">Información</h4>
             <ul className="space-y-2 text-sm text-gray-300">
-              <li><a href="#" className="hover:text-gray-100 transition">Sobre nosotros</a></li>
-              <li><a href="#" className="hover:text-gray-100 transition">Contacto</a></li>
-              <li><a href="#" className="hover:text-gray-100 transition">Política de privacidad</a></li>
-              <li><a href="#" className="hover:text-gray-100 transition">Términos y condiciones</a></li>
+              <li><a href="/nosotros" className="hover:text-gray-100 transition">Sobre nosotros</a></li>
+              <li><a href="/nosotros" className="hover:text-gray-100 transition">Contacto</a></li>
+              <li><a href="/nosotros" className="hover:text-gray-100 transition">Política de privacidad</a></li>
+              <li><a href="/nosotros" className="hover:text-gray-100 transition">Términos y condiciones</a></li>
             </ul>
           </div>
 
