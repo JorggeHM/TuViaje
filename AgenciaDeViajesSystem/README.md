@@ -14,6 +14,7 @@ npm install antd
 npm install @ant-design/icons
 npm install tailwindcss @tailwindcss/vite
 npm install react-router-dom
+npm install lucide-react
 npm run dev
 
 --Verficacion--

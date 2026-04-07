@@ -1,5 +1,16 @@
-import _, { useEffect, useState } from 'react';
 
+
+
+import _, { useEffect, useState } from 'react';
+const imagenesBanner = [
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+  "https://images.unsplash.com/photo-1488646953014-85cb44e25828",
+  "https://images.unsplash.com/photo-1491553895911-0055eca6402d"
+];
+const imagenAleatoria =
+  imagenesBanner[Math.floor(Math.random() * imagenesBanner.length)];
 const Header = () => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -13,11 +24,11 @@ const Header = () => {
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80')",
+      backgroundImage: `url(${imagenAleatoria})`,
         }}
+        
       />
-
+      <div className="absolute inset-0 bg-black/40" />
       <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/30 to-black/60" />
 
       <div className="relative z-10 flex h-full items-center justify-start px-6 sm:px-8 lg:px-16">

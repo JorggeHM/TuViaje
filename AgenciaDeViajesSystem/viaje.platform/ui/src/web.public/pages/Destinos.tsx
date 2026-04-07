@@ -15,13 +15,13 @@ interface Viaje {
 const Destinos = () => {
 
   const [viajes, setViajes] = useState<Viaje[]>([])
-
+  //MANDA A LLAMAR A LA API Y OBTIENE UINJSON
   useEffect(() => {
     fetch("http://localhost/AgenciaDeViajesSystem/API/API_getviajes.php")
       .then(response => response.json())
       .then(data => setViajes(data))
   }, [])
-
+  //MAPEA EL JSON OBTENIDO Y LO MUESTRA EN PANTALLA EN FORMA DE TARJETAS
   return (
     <div className="grid grid-cols-3 gap-6 p-6">
 
