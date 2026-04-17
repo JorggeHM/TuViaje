@@ -1,4 +1,12 @@
-
+/**
+ * CoverPrivate.tsx — ARCHIVO LEGACY (no está en uso)
+ *
+ * ⚠️  Este era el hero banner del área privada.
+ * PrivateLayout.tsx ya no lo usa — el área privada (login/registro)
+ * tiene su propio diseño de pantalla completa sin banner.
+ *
+ * Puede eliminarse de forma segura.
+ */
 const Header = () => {
 
   return (

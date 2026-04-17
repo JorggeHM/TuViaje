@@ -1,3 +1,18 @@
+/**
+ * FooterPublic.tsx — Pie de página compartido
+ *
+ * Se muestra al final de todas las páginas públicas y privadas
+ * (PrivateLayout también lo importa desde aquí).
+ *
+ * Secciones:
+ *   - Logo y descripción de la empresa
+ *   - Links de información (Nosotros, Contacto, Privacidad, Términos)
+ *   - Destinos destacados con anclas
+ *   - Redes sociales (Font Awesome) y correo de soporte
+ *
+ * NOTA: Los íconos de redes sociales usan Font Awesome (<i className="fab ..."/>).
+ * Asegúrate de que la librería esté cargada en index.html para que se vean.
+ */
 import React from 'react';
 
 const Footer: React.FC = () => {

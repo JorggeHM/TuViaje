@@ -1,3 +1,13 @@
+/**
+ * SobreNosotros.tsx — ARCHIVO LEGACY (no está en uso)
+ *
+ * ⚠️  Esta es una versión antigua de la página "Sobre Nosotros".
+ * Fue reemplazada por AboutUs.tsx, que tiene el diseño actualizado
+ * con la estética naranja del proyecto.
+ *
+ * NO está registrada en ninguna ruta de ApplicationRouter.tsx.
+ * Puede eliminarse de forma segura.
+ */
 function SobreNosotros() {
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4">
