@@ -27,8 +27,10 @@ import { useLocation, useNavigate } from "react-router";
 import {
   Star, CheckCircle2, Clock, Users, MapPin, CalendarDays,
   Shield, RefreshCw, CreditCard, Heart, ChevronLeft, Plane,
-  BadgeCheck, MessageCircle,
+  BadgeCheck, MessageCircle, X, Loader2,
 } from "lucide-react";
+import ReservasService from "../../infrastructure/services/reservas.service";
+import AuthService from "../../infrastructure/services/auth.service";
 
 const THUMBNAILS_EXTRA = [
   "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=300&q=80",
@@ -56,13 +58,17 @@ export default function ViajeDetalle() {
   const location  = useLocation();
   const navigate  = useNavigate();
   const viaje     = location.state as null | {
-    nombre: string; precio: number; cuposDisponibles: number;
+    id?: number; nombre: string; precio: number; cuposDisponibles: number;
     personasPorViaje: number; imagenUrl: string; fechaSalida: string;
     duracionDias: number; rating: number; descripcionCorta: string;
   };
 
-  const [imgActiva,  setImgActiva]  = useState(0);
-  const [personas,   setPersonas]   = useState(1);
+  const [imgActiva,    setImgActiva]    = useState(0);
+  const [personas,     setPersonas]     = useState(1);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [cargando,     setCargando]     = useState(false);
+  const [confirmado,   setConfirmado]   = useState(false);
+  const [errorMsg,     setErrorMsg]     = useState<string | null>(null);
 
   if (!viaje) {
     navigate("/destinos");
@@ -74,11 +80,40 @@ export default function ViajeDetalle() {
     imagenUrl, fechaSalida, duracionDias, rating, descripcionCorta,
   } = viaje;
 
-  const galeria   = [imagenUrl, ...THUMBNAILS_EXTRA];
+  const galeria    = [imagenUrl, ...THUMBNAILS_EXTRA];
   const cuposBajos = cuposDisponibles <= 5;
   const total      = precio * personas;
 
+  const handleReservar = async () => {
+    if (!AuthService.isAuthenticated()) {
+      navigate("/login");
+      return;
+    }
+    setModalAbierto(true);
+    setConfirmado(false);
+    setErrorMsg(null);
+  };
+
+  const confirmarReserva = async () => {
+    if (!viaje?.id) {
+      setErrorMsg("No se puede identificar el viaje. Volvé al catálogo y seleccionalo de nuevo.");
+      return;
+    }
+    setCargando(true);
+    setErrorMsg(null);
+    try {
+      await ReservasService.crear(viaje.id, personas);
+      setConfirmado(true);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setErrorMsg(msg ?? "Ocurrió un error al crear la reserva. Intentá de nuevo.");
+    } finally {
+      setCargando(false);
+    }
+  };
+
   return (
+    <>
     <div className="bg-gray-50 min-h-screen pb-16">
 
       {/* ── Breadcrumb ── */}
@@ -301,9 +336,13 @@ export default function ViajeDetalle() {
                 </div>
 
                 {/* Botones */}
-                <button className="w-full py-3 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 active:scale-95 transition-all shadow-md shadow-orange-900/20 flex items-center justify-center gap-2">
+                <button
+                  onClick={handleReservar}
+                  disabled={cuposDisponibles === 0}
+                  className="w-full py-3 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 active:scale-95 transition-all shadow-md shadow-orange-900/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   <CreditCard className="w-4 h-4" />
-                  Reservar ahora
+                  {cuposDisponibles === 0 ? "Sin cupos disponibles" : "Reservar ahora"}
                 </button>
                 <button className="w-full py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:border-orange-300 hover:text-orange-600 transition flex items-center justify-center gap-2 text-sm">
                   <Heart className="w-4 h-4" />
@@ -342,5 +381,94 @@ export default function ViajeDetalle() {
         </div>
       </div>
     </div>
+
+    {/* ── Modal de confirmación de reserva ── */}
+    {modalAbierto && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
+          {/* Header */}
+          <div className="bg-gradient-to-r from-orange-700 to-orange-500 px-6 py-4 flex items-center justify-between">
+            <h2 className="text-white font-black text-lg">Confirmar reserva</h2>
+            {!cargando && (
+              <button onClick={() => setModalAbierto(false)} className="text-white/80 hover:text-white transition">
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          <div className="p-6 space-y-4">
+            {confirmado ? (
+              /* Estado: éxito */
+              <div className="text-center py-4 space-y-3">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="font-black text-gray-900 text-lg">¡Reserva confirmada!</h3>
+                <p className="text-gray-500 text-sm">
+                  Tu reserva para <strong>{nombre}</strong> fue creada exitosamente.
+                  Podés verla en tu perfil.
+                </p>
+                <button
+                  onClick={() => setModalAbierto(false)}
+                  className="w-full py-2.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 transition"
+                >
+                  Entendido
+                </button>
+              </div>
+            ) : (
+              /* Estado: confirmación */
+              <>
+                <div className="flex items-center gap-3 bg-orange-50 rounded-xl p-3">
+                  <img src={imagenUrl} alt={nombre} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm leading-tight">{nombre}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{fechaSalida} · {duracionDias} días</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Personas</span>
+                    <span className="font-semibold">{personas}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Precio por persona</span>
+                    <span className="font-semibold">${precio} USD</span>
+                  </div>
+                  <div className="flex justify-between font-black text-gray-900 border-t border-gray-100 pt-2">
+                    <span>Total</span>
+                    <span className="text-orange-600">${total} USD</span>
+                  </div>
+                </div>
+
+                {errorMsg && (
+                  <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{errorMsg}</p>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={() => setModalAbierto(false)}
+                    disabled={cargando}
+                    className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:border-gray-300 transition disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmarReserva}
+                    disabled={cargando}
+                    className="flex-1 py-2.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 transition flex items-center justify-center gap-2 disabled:opacity-70"
+                  >
+                    {cargando ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                    {cargando ? "Procesando..." : "Confirmar"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

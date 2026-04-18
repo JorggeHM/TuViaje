@@ -1,27 +1,7 @@
-/**
- * Destinos.tsx — Catálogo de viajes (rutas: /destinos y /experiencias)
- *
- * Obtiene la lista de viajes desde la API del backend y los muestra
- * en un grid de tarjetas usando el componente TravelCard.
- *
- * Flujo de datos:
- *   1. Al montar el componente, useEffect dispara un fetch al endpoint
- *   2. La URL base se toma de la variable de entorno VITE_API_BASE_URL (.env)
- *      Si no está definida, usa http://localhost como fallback
- *   3. Mientras espera: muestra 6 skeletons animados (animate-pulse)
- *   4. Si la API falla o devuelve array vacío: muestra mensaje de error
- *   5. Con datos: renderiza un TravelCard por cada viaje
- *
- * Para cambiar el puerto o ruta de la API:
- *   Edita VITE_API_BASE_URL en el archivo .env de la raíz del proyecto UI.
- *
- * Interfaz Viaje — estructura del JSON que devuelve la API:
- *   { id, title, description, destination, price, available_seats,
- *     start_date, end_date }
- */
 import { useEffect, useState } from "react";
 import { Plane } from "lucide-react";
 import TravelCard from "../../components/TravelCard";
+import client from "../../infrastructure/api/client";
 
 interface Viaje {
   id: number;
@@ -32,19 +12,20 @@ interface Viaje {
   available_seats: number;
   start_date: string;
   end_date: string;
+  duracion_dias: number;
+  rating: number;
+  imagen_url: string;
+  estado: string;
 }
 
 const Destinos = () => {
   const [viajes, setViajes] = useState<Viaje[]>([]);
   const [cargando, setCargando] = useState(true);
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost";
-
   useEffect(() => {
-    fetch(`${apiBase}/AgenciaDeViajesSystem/API/API_getviajes.php`)
-      .then((res) => res.json())
-      .then((data) => {
-        setViajes(data);
+    client.get('/api/viajes')
+      .then((res) => {
+        setViajes(res.data.data ?? []);
         setCargando(false);
       })
       .catch(() => setCargando(false));
@@ -94,12 +75,16 @@ const Destinos = () => {
             {viajes.map((viaje) => (
               <TravelCard
                 key={viaje.id}
+                id={viaje.id}
                 nombre={viaje.title}
                 precio={viaje.price}
                 cuposDisponibles={viaje.available_seats}
                 personasPorViaje={2}
                 descripcionCorta={viaje.description}
                 fechaSalida={viaje.start_date}
+                duracionDias={viaje.duracion_dias}
+                rating={viaje.rating}
+                imagenUrl={viaje.imagen_url}
               />
             ))}
           </div>

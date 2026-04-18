@@ -78,19 +78,18 @@ const ApplicationRouter = (): JSX.Element => {
                     <Route path={"/viaje/detalle"}  element={<ViajeDetallePage/>}/>
                 </Route>
 
-                {/* ── Rutas privadas ──────────────────────────────────────
-                    Comparten el mismo Nav y Footer pero NO muestran CoverPublic.
-                    En un futuro se puede agregar un guard de autenticación aquí.
-                ─────────────────────────────────────────────────────── */}
+                {/* ── Rutas privadas (login / registro) ───────────────── */}
                 <Route element={<PrivateLayout/>}>
                     <Route path={"/login"}    element={<LoginPage/>}/>
                     <Route path={"/register"} element={<Register/>}/>
-                    <Route path={"/admin"} element={<AdminLayout/>}>
-                        <Route path={"resumen"} element={<AdminResumen/>}/>
-                        <Route path={"viajes"} element={<AdminViajes/>}/>
-                        <Route path={"usuarios"} element={<AdminUsuarios/>}/>
-                        <Route path={"ventas"} element={<AdminVentas/>}/>
-                    </Route>
+                </Route>
+
+                {/* ── Panel de administración (layout propio) ──────────── */}
+                <Route path={"/admin"} element={<AdminLayout/>}>
+                    <Route index             element={<AdminResumen/>}/>
+                    <Route path={"viajes"}   element={<AdminViajes/>}/>
+                    <Route path={"usuarios"} element={<AdminUsuarios/>}/>
+                    <Route path={"ventas"}   element={<AdminVentas/>}/>
                 </Route>
 
             </Routes>

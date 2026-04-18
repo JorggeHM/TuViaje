@@ -1,98 +1,88 @@
-/**
- * AdminUsuarios.tsx — Gestión de usuarios del panel de administración
- * Ruta: /admin/usuarios
- *
- * Muestra la lista de usuarios registrados con sus datos clave.
- * Permite buscar, filtrar por estado y ver el detalle de cada perfil.
- * Solo UI — sin conexión al backend aún.
- *
- * Pendiente:
- *   - GET  /admin/usuarios           → listado
- *   - PATCH /admin/usuarios/:id/estado → activar/desactivar
- *   - DELETE /admin/usuarios/:id     → eliminar cuenta
- */
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search, Plane, ShoppingBag,
   UserCheck, UserX, Trash2, X,
 } from "lucide-react";
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-type EstadoUsuario = "Activo" | "Inactivo";
+import client from "../../infrastructure/api/client";
 
 interface Usuario {
-  id:        number;
-  nombre:    string;
-  email:     string;
-  iniciales: string;
-  registro:  string;
-  viajes:    number;
-  compras:   number;
-  estado:    EstadoUsuario;
+  id:            number;
+  name:          string;
+  email:         string;
+  rol:           string;
+  activo:        number;
+  created_at:    string;
+  total_compras: number;
 }
 
-// ── Datos estáticos ───────────────────────────────────────────────────────────
-const USUARIOS_INICIALES: Usuario[] = [
-  { id: 1,  nombre: "Ana García",      email: "ana.garcia@mail.com",       iniciales: "AG", registro: "12 Ene 2024", viajes: 3,  compras: 3,  estado: "Activo"   },
-  { id: 2,  nombre: "Carlos Méndez",   email: "carlos.m@mail.com",         iniciales: "CM", registro: "25 Ene 2024", viajes: 1,  compras: 1,  estado: "Activo"   },
-  { id: 3,  nombre: "Sofía Torres",    email: "sofia.torres@mail.com",     iniciales: "ST", registro: "03 Feb 2024", viajes: 5,  compras: 4,  estado: "Activo"   },
-  { id: 4,  nombre: "Luis Herrera",    email: "lherrera@mail.com",         iniciales: "LH", registro: "14 Feb 2024", viajes: 2,  compras: 2,  estado: "Activo"   },
-  { id: 5,  nombre: "María López",     email: "m.lopez@mail.com",          iniciales: "ML", registro: "22 Feb 2024", viajes: 0,  compras: 0,  estado: "Inactivo" },
-  { id: 6,  nombre: "Diego Ramírez",   email: "diego.r@mail.com",          iniciales: "DR", registro: "01 Mar 2024", viajes: 4,  compras: 4,  estado: "Activo"   },
-  { id: 7,  nombre: "Valentina Cruz",  email: "vcruz@mail.com",            iniciales: "VC", registro: "08 Mar 2024", viajes: 1,  compras: 1,  estado: "Activo"   },
-  { id: 8,  nombre: "Andrés Morales",  email: "andres.morales@mail.com",   iniciales: "AM", registro: "15 Mar 2024", viajes: 2,  compras: 1,  estado: "Inactivo" },
-  { id: 9,  nombre: "Isabella Vega",   email: "ivega@mail.com",            iniciales: "IV", registro: "28 Mar 2024", viajes: 6,  compras: 6,  estado: "Activo"   },
-  { id: 10, nombre: "Roberto Castro",  email: "r.castro@mail.com",         iniciales: "RC", registro: "10 Abr 2024", viajes: 0,  compras: 0,  estado: "Inactivo" },
-];
+function iniciales(name: string) {
+  return name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+}
 
-// ── Componente principal ──────────────────────────────────────────────────────
 export default function AdminUsuarios() {
-  const [usuarios,     setUsuarios]     = useState<Usuario[]>(USUARIOS_INICIALES);
+  const [usuarios,     setUsuarios]     = useState<Usuario[]>([]);
   const [busqueda,     setBusqueda]     = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("Todos");
   const [confirmElim,  setConfirmElim]  = useState<number | null>(null);
+  const [cargando,     setCargando]     = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
 
-  // ── Filtrado ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    client.get("/api/admin/usuarios")
+      .then((res) => setUsuarios(res.data.data ?? []))
+      .catch(() => setError("No se pudo cargar la lista de usuarios."))
+      .finally(() => setCargando(false));
+  }, []);
+
   const usuariosFiltrados = usuarios.filter((u) => {
-    const match = u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-                  u.email.toLowerCase().includes(busqueda.toLowerCase());
-    const estado = filtroEstado === "Todos" || u.estado === filtroEstado;
+    const match  = u.name.toLowerCase().includes(busqueda.toLowerCase()) ||
+                   u.email.toLowerCase().includes(busqueda.toLowerCase());
+    const estado = filtroEstado === "Todos" ||
+                   (filtroEstado === "Activo"   && u.activo === 1) ||
+                   (filtroEstado === "Inactivo" && u.activo === 0);
     return match && estado;
   });
 
-  // ── Toggle estado activo/inactivo ─────────────────────────────────────────
-  const toggleEstado = (id: number) => {
-    setUsuarios((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? { ...u, estado: u.estado === "Activo" ? "Inactivo" : "Activo" }
-          : u
-      )
-    );
+  const toggleEstado = async (id: number) => {
+    try {
+      await client.patch(`/api/admin/usuarios/${id}/estado`);
+      setUsuarios((prev) => prev.map((u) => u.id === id ? { ...u, activo: u.activo === 1 ? 0 : 1 } : u));
+    } catch {
+      setError("Error al cambiar el estado del usuario.");
+    }
   };
 
-  // ── Eliminar usuario ──────────────────────────────────────────────────────
-  const eliminarUsuario = (id: number) => {
-    setUsuarios((prev) => prev.filter((u) => u.id !== id));
-    setConfirmElim(null);
+  const eliminarUsuario = async (id: number) => {
+    try {
+      await client.delete(`/api/admin/usuarios/${id}`);
+      setUsuarios((prev) => prev.filter((u) => u.id !== id));
+      setConfirmElim(null);
+    } catch {
+      setError("Error al eliminar el usuario.");
+    }
   };
 
-  // ── Métricas rápidas ──────────────────────────────────────────────────────
-  const totalActivos   = usuarios.filter((u) => u.estado === "Activo").length;
-  const totalInactivos = usuarios.filter((u) => u.estado === "Inactivo").length;
-  const totalCompras   = usuarios.reduce((sum, u) => sum + u.compras, 0);
+  const totalActivos   = usuarios.filter((u) => u.activo === 1).length;
+  const totalInactivos = usuarios.filter((u) => u.activo === 0).length;
+  const totalCompras   = usuarios.reduce((sum, u) => sum + (u.total_compras ?? 0), 0);
 
   return (
     <div className="space-y-5 max-w-7xl">
 
-      {/* ── Mini métricas ─────────────────────────────────────────────── */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl flex items-center justify-between">
+          {error}
+          <button onClick={() => setError(null)}><X className="w-4 h-4" /></button>
+        </div>
+      )}
+
+      {/* Mini métricas */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total usuarios",  valor: usuarios.length,  color: "bg-purple-50 text-purple-600" },
-          { label: "Activos",         valor: totalActivos,     color: "bg-green-50  text-green-600"  },
-          { label: "Inactivos",       valor: totalInactivos,   color: "bg-gray-100  text-gray-500"   },
-          { label: "Total compras",   valor: totalCompras,     color: "bg-orange-50 text-orange-600" },
+          { label: "Total usuarios", valor: usuarios.length,  color: "bg-purple-50 text-purple-600" },
+          { label: "Activos",        valor: totalActivos,     color: "bg-green-50  text-green-600"  },
+          { label: "Inactivos",      valor: totalInactivos,   color: "bg-gray-100  text-gray-500"   },
+          { label: "Total compras",  valor: totalCompras,     color: "bg-orange-50 text-orange-600" },
         ].map(({ label, valor, color }) => (
           <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
@@ -106,7 +96,7 @@ export default function AdminUsuarios() {
         ))}
       </div>
 
-      {/* ── Barra de búsqueda y filtros ───────────────────────────────── */}
+      {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -118,16 +108,11 @@ export default function AdminUsuarios() {
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 bg-white transition"
           />
         </div>
-
         <div className="flex gap-1.5 bg-white border border-gray-200 rounded-xl p-1">
           {["Todos", "Activo", "Inactivo"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFiltroEstado(f)}
+            <button key={f} onClick={() => setFiltroEstado(f)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                filtroEstado === f
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-800"
+                filtroEstado === f ? "bg-orange-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-800"
               }`}
             >
               {f}
@@ -136,7 +121,7 @@ export default function AdminUsuarios() {
         </div>
       </div>
 
-      {/* ── Tabla de usuarios ─────────────────────────────────────────── */}
+      {/* Tabla */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -144,14 +129,22 @@ export default function AdminUsuarios() {
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Usuario</th>
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden md:table-cell">Registro</th>
-                <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Viajes</th>
+                <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Rol</th>
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Compras</th>
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Estado</th>
                 <th className="px-5 py-3.5 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {usuariosFiltrados.length === 0 ? (
+              {cargando ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <tr key={i}>
+                    <td colSpan={6} className="px-5 py-4">
+                      <div className="h-4 bg-gray-100 rounded animate-pulse" />
+                    </td>
+                  </tr>
+                ))
+              ) : usuariosFiltrados.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">
                     No se encontraron usuarios.
@@ -160,65 +153,58 @@ export default function AdminUsuarios() {
               ) : (
                 usuariosFiltrados.map((u) => (
                   <tr key={u.id} className="hover:bg-gray-50 transition">
-                    {/* Avatar + datos */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-orange-600 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
-                          {u.iniciales}
+                          {iniciales(u.name)}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900">{u.nombre}</p>
+                          <p className="font-bold text-gray-900">{u.name}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{u.email}</p>
                         </div>
                       </div>
                     </td>
-                    {/* Fecha de registro */}
-                    <td className="px-5 py-4 text-gray-500 hidden md:table-cell">{u.registro}</td>
-                    {/* Nº viajes */}
+                    <td className="px-5 py-4 text-gray-500 hidden md:table-cell">
+                      {new Date(u.created_at).toLocaleDateString("es-AR")}
+                    </td>
+                    <td className="px-5 py-4 hidden sm:table-cell">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                        u.rol === "admin"
+                          ? "bg-purple-50 text-purple-700 border-purple-200"
+                          : "bg-gray-50 text-gray-500 border-gray-200"
+                      }`}>
+                        {u.rol}
+                      </span>
+                    </td>
                     <td className="px-5 py-4 hidden sm:table-cell">
                       <div className="flex items-center gap-1.5 text-gray-700">
                         <Plane className="w-3.5 h-3.5 text-gray-300" />
-                        {u.viajes}
+                        {u.total_compras ?? 0}
                       </div>
                     </td>
-                    {/* Nº compras */}
-                    <td className="px-5 py-4 hidden sm:table-cell">
-                      <div className="flex items-center gap-1.5 text-gray-700">
-                        <ShoppingBag className="w-3.5 h-3.5 text-gray-300" />
-                        {u.compras}
-                      </div>
-                    </td>
-                    {/* Estado */}
                     <td className="px-5 py-4">
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                        u.estado === "Activo"
+                        u.activo === 1
                           ? "bg-green-50 text-green-700 border-green-200"
                           : "bg-gray-100 text-gray-500 border-gray-200"
                       }`}>
-                        {u.estado}
+                        {u.activo === 1 ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    {/* Acciones */}
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-1.5">
-                        {/* Toggle activo/inactivo */}
-                        <button
-                          onClick={() => toggleEstado(u.id)}
-                          title={u.estado === "Activo" ? "Desactivar" : "Activar"}
+                        <button onClick={() => toggleEstado(u.id)}
+                          title={u.activo === 1 ? "Desactivar" : "Activar"}
                           className={`p-2 rounded-lg transition ${
-                            u.estado === "Activo"
+                            u.activo === 1
                               ? "text-gray-400 hover:bg-amber-50 hover:text-amber-600"
                               : "text-gray-400 hover:bg-green-50 hover:text-green-600"
                           }`}
                         >
-                          {u.estado === "Activo" ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                          {u.activo === 1 ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                         </button>
-                        {/* Eliminar */}
-                        <button
-                          onClick={() => setConfirmElim(u.id)}
-                          title="Eliminar usuario"
-                          className="p-2 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition"
-                        >
+                        <button onClick={() => setConfirmElim(u.id)} title="Eliminar"
+                          className="p-2 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -234,41 +220,28 @@ export default function AdminUsuarios() {
         </div>
       </div>
 
-      {/* ── Modal confirmar eliminación ───────────────────────────────── */}
+      {/* Modal confirmar eliminación */}
       {confirmElim !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-            <button
-              onClick={() => setConfirmElim(null)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-50 mb-4">
               <Trash2 className="w-7 h-7 text-red-500" />
             </div>
             <h3 className="text-base font-black text-gray-900 mb-1">¿Eliminar este usuario?</h3>
-            <p className="text-sm text-gray-400 mb-6">
-              Se eliminará la cuenta y todos sus datos. Esta acción es irreversible.
-            </p>
+            <p className="text-sm text-gray-400 mb-6">Se eliminará la cuenta y todos sus datos. Esta acción es irreversible.</p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmElim(null)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
-              >
+              <button onClick={() => setConfirmElim(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">
                 Cancelar
               </button>
-              <button
-                onClick={() => eliminarUsuario(confirmElim)}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition"
-              >
+              <button onClick={() => eliminarUsuario(confirmElim)}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition">
                 Eliminar
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

@@ -18,7 +18,7 @@
  */
 
 import { useState } from "react";
-import { Outlet, NavLink, useNavigate, useLocation } from "react-router";
+import { Outlet, NavLink, useNavigate, useLocation, Navigate } from "react-router";
 import {
   LayoutDashboard,
   Plane,
@@ -30,6 +30,7 @@ import {
   ChevronRight,
   Bell,
 } from "lucide-react";
+import AuthService from "../../infrastructure/services/auth.service";
 
 // ── Definición de ítems del menú lateral ─────────────────────────────────────
 const NAV_ITEMS = [
@@ -49,8 +50,13 @@ const TITULOS: Record<string, string> = {
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const navigate    = useNavigate();
+  const navigate     = useNavigate();
   const { pathname } = useLocation();
+
+  const adminUser = AuthService.getUser();
+
+  if (!AuthService.isAuthenticated()) return <Navigate to="/login" replace />;
+  if (!AuthService.isAdmin())         return <Navigate to="/"      replace />;
 
   const tituloPagina = TITULOS[pathname] ?? "Panel de administración";
 
@@ -128,16 +134,16 @@ export default function AdminLayout() {
           {/* Info admin */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-orange-600 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
-              AD
+              {adminUser?.name?.slice(0, 2).toUpperCase() ?? "AD"}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate">Administrador</p>
-              <p className="text-[10px] text-gray-400 truncate">admin@tuviaje.com</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{adminUser?.name ?? "Admin"}</p>
+              <p className="text-[10px] text-gray-400 truncate">{adminUser?.email ?? ""}</p>
             </div>
           </div>
           {/* Botón cerrar sesión */}
           <button
-            onClick={() => navigate("/login")}
+            onClick={async () => { await AuthService.logout(); navigate("/login"); }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-red-50 hover:text-red-600 transition"
           >
             <LogOut className="w-4 h-4" />
@@ -174,7 +180,7 @@ export default function AdminLayout() {
             </button>
             {/* Avatar */}
             <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-white text-xs font-black">
-              AD
+              {adminUser?.name?.slice(0, 2).toUpperCase() ?? "AD"}
             </div>
           </div>
         </header>

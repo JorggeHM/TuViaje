@@ -31,6 +31,7 @@ export interface User {
     id: number;
     email: string;
     name: string;
+    rol: 'usuario' | 'admin';
 }
 
 class AuthService {
@@ -41,7 +42,7 @@ class AuthService {
      * El token es luego adjuntado automáticamente por el interceptor de Axios.
      */
     static async login(email: string, password: string) {
-        const response = await client.post('/auth/login', { email, password });
+        const response = await client.post('/api/auth/login', { email, password });
 
         if (response.data.data.token) {
             localStorage.setItem('token', response.data.data.token);
@@ -50,29 +51,23 @@ class AuthService {
         return response.data.data;
     }
 
-    /**
-     * Registra un nuevo usuario.
-     * No guarda el token automáticamente — el usuario debe hacer login después.
-     */
     static async register(email: string, password: string, name: string) {
-        const response = await client.post('/auth/register', { email, password, name });
+        const response = await client.post('/api/auth/register', { email, password, name });
+
+        if (response.data.data?.token) {
+            localStorage.setItem('token', response.data.data.token);
+        }
+
         return response.data.data;
     }
 
-    /**
-     * Obtiene los datos del usuario actualmente autenticado.
-     * Requiere que exista un token válido en localStorage.
-     */
     static async getCurrentUser() {
-        const response = await client.get('/auth/me');
+        const response = await client.get('/api/auth/me');
         return response.data.data;
     }
 
-    /**
-     * Cierra la sesión: invalida el token en el servidor y lo elimina del localStorage.
-     */
     static async logout() {
-        await client.post('/auth/logout');
+        await client.post('/api/auth/logout');
         localStorage.removeItem('token');
     }
 
@@ -84,6 +79,33 @@ class AuthService {
     /** Devuelve true si hay un token guardado (el usuario está "logueado"). */
     static isAuthenticated() {
         return !!this.getToken();
+    }
+
+    /** Decodifica el payload del JWT y lo devuelve, sin validar firma. */
+    static getUser(): User | null {
+        const token = this.getToken();
+        if (!token) return null;
+        try {
+            // JWT usa base64url (sin padding =). atob() requiere base64 estándar.
+            const segment = token.split('.')[1]
+                .replace(/-/g, '+')
+                .replace(/_/g, '/')
+                .padEnd(Math.ceil(token.split('.')[1].length / 4) * 4, '=');
+            const payload = JSON.parse(atob(segment));
+            return {
+                id:    payload.sub,
+                email: payload.email,
+                name:  payload.name,
+                rol:   payload.rol ?? 'usuario',
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    /** Devuelve true si el usuario autenticado tiene rol admin. */
+    static isAdmin() {
+        return this.getUser()?.rol === 'admin';
     }
 }
 

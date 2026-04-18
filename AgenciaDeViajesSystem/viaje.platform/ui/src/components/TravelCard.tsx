@@ -26,6 +26,7 @@ import { Clock, Users, Star, MapPin } from "lucide-react";
 import { useNavigate } from "react-router";
 
 interface TravelCardProps {
+  id?: number;
   nombre: string;
   precio: number;
   cuposDisponibles: number;
@@ -38,6 +39,7 @@ interface TravelCardProps {
 }
 
 const TravelCard = ({
+  id,
   nombre,
   precio,
   cuposDisponibles,
@@ -59,7 +61,7 @@ const TravelCard = ({
   const irADetalle = () => {
     navigate("/viaje/detalle", {
       state: {
-        nombre, precio, cuposDisponibles, personasPorViaje,
+        id, nombre, precio, cuposDisponibles, personasPorViaje,
         imagenUrl, fechaSalida, duracionDias, rating, descripcionCorta
       },
     });

@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(mkdir -p \"C:/Users/jorje/onedrive/escritorio/TuViaje/AgenciaDeViajesSystem/viaje.database\")",
+      "Bash(mkdir -p \"C:/Users/jorje/onedrive/escritorio/TuViaje/AgenciaDeViajesSystem/viaje.api/config\")",
+      "Bash(mkdir -p \"C:/Users/jorje/onedrive/escritorio/TuViaje/AgenciaDeViajesSystem/viaje.api/core\")",
+      "Bash(mkdir -p \"C:/Users/jorje/onedrive/escritorio/TuViaje/AgenciaDeViajesSystem/viaje.api/helpers\")",
+      "Bash(mkdir -p \"C:/Users/jorje/onedrive/escritorio/TuViaje/AgenciaDeViajesSystem/viaje.api/controllers/admin\")",
+      "Bash(find *)"
     ]
   }
 }
