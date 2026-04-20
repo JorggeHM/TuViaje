@@ -1,0 +1,6 @@
+# Solo servir archivos de imagen — nunca ejecutar PHP
+<FilesMatch "\.php$">
+    Deny from all
+</FilesMatch>
+
+Options -Indexes

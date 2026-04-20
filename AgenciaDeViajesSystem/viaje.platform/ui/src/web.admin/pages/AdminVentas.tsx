@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   DollarSign, TrendingUp, ShoppingBag,
-  Clock, CheckCircle, XCircle, Search, X,
+  Clock, CheckCircle, XCircle, Search, X, Loader2,
 } from "lucide-react";
 import client from "../../infrastructure/api/client";
 
@@ -63,12 +63,13 @@ function graficoSemanal(ventas: Venta[]) {
 }
 
 export default function AdminVentas() {
-  const [ventas,       setVentas]       = useState<Venta[]>([]);
-  const [stats,        setStats]        = useState<Stats | null>(null);
-  const [busqueda,     setBusqueda]     = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("Todos");
-  const [cargando,     setCargando]     = useState(true);
-  const [error,        setError]        = useState<string | null>(null);
+  const [ventas,        setVentas]        = useState<Venta[]>([]);
+  const [stats,         setStats]         = useState<Stats | null>(null);
+  const [busqueda,      setBusqueda]      = useState("");
+  const [filtroEstado,  setFiltroEstado]  = useState("Todos");
+  const [cargando,      setCargando]      = useState(true);
+  const [error,         setError]         = useState<string | null>(null);
+  const [accionando,    setAccionando]    = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -82,6 +83,20 @@ export default function AdminVentas() {
       .catch(() => setError("No se pudieron cargar los datos de ventas."))
       .finally(() => setCargando(false));
   }, []);
+
+  const cambiarEstado = async (id: number, estado: string) => {
+    setAccionando(id);
+    try {
+      await client.patch(`/api/admin/ventas/${id}/estado`, { estado });
+      setVentas((prev) => prev.map((v) => v.id === id ? { ...v, estado } : v));
+      // Recargar stats
+      client.get("/api/admin/ventas/stats").then((r) => setStats(r.data.data ?? null));
+    } catch {
+      setError("No se pudo actualizar el estado.");
+    } finally {
+      setAccionando(null);
+    }
+  };
 
   const ventasFiltradas = ventas.filter((v) => {
     const match  = v.usuario_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -224,6 +239,7 @@ export default function AdminVentas() {
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Monto</th>
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Estado</th>
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden xl:table-cell">Fecha</th>
+                <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -251,6 +267,35 @@ export default function AdminVentas() {
                     <td className="px-5 py-3.5 hidden sm:table-cell"><BadgeEstado estado={v.estado} /></td>
                     <td className="px-5 py-3.5 text-xs text-gray-400 hidden xl:table-cell">
                       {new Date(v.fecha).toLocaleString("es-AR")}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {accionando === v.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                      ) : v.estado === "Pendiente" ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => cambiarEstado(v.id, "Confirmada")}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-50 text-green-700 text-xs font-semibold border border-green-200 hover:bg-green-100 transition"
+                          >
+                            <CheckCircle className="w-3 h-3" /> Confirmar
+                          </button>
+                          <button
+                            onClick={() => cambiarEstado(v.id, "Cancelada")}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-semibold border border-red-200 hover:bg-red-100 transition"
+                          >
+                            <XCircle className="w-3 h-3" /> Cancelar
+                          </button>
+                        </div>
+                      ) : v.estado === "Confirmada" ? (
+                        <button
+                          onClick={() => cambiarEstado(v.id, "Cancelada")}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-semibold border border-red-200 hover:bg-red-100 transition"
+                        >
+                          <XCircle className="w-3 h-3" /> Cancelar
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
                     </td>
                   </tr>
                 ))

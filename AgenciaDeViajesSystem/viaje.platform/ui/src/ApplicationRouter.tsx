@@ -1,36 +1,9 @@
-/**
- * ApplicationRouter.tsx — Enrutador central de la aplicación
- *
- * Define TODAS las rutas de la SPA y las agrupa bajo sus layouts correspondientes.
- * Es el archivo que conecta URLs con componentes de página.
- *
- * Mapa de rutas:
- * ┌─ PublicLayout  (Nav + CoverPublic condicional + Footer)
- * │   ├── /                 → HomePage        Página de inicio con hero y secciones
- * │   ├── /nosotros         → AboutUSPage     Información de la empresa
- * │   ├── /destinos         → DestinosPage    Catálogo de viajes desde la API
- * │   ├── /experiencias     → ExperienciasPage Feed de experiencias de viajeros
- * │   └── /viaje/detalle    → ViajeDetallePage Ficha de producto (sin CoverPublic)
- * │
- * ├─ PrivateLayout  (Nav + Footer, sin CoverPublic)
- * │   ├── /login            → LoginPage       Formulario de inicio de sesión
- * │   └── /register         → Register        Formulario de registro
- * │
- * └─ AdminLayout  (Sidebar + Topbar — sin Nav ni Footer públicos)
- *     ├── /admin            → AdminResumen    Overview con métricas y últimas ventas
- *     ├── /admin/viajes     → AdminViajes     CRUD de viajes (tabla + modal)
- *     ├── /admin/usuarios   → AdminUsuarios   Lista de usuarios registrados
- *     └── /admin/ventas     → AdminVentas     Reporte de ingresos y ventas
- *
- * NOTA: Los datos del viaje seleccionado se pasan a /viaje/detalle mediante
- * React Router state (navigate("/viaje/detalle", { state: {...} })).
- * No se usa un parámetro :id en la URL porque no hay endpoint individual en la API.
- */
 import { type JSX, useEffect } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 
 import PrivateLayout   from "./web.private/layout/PrivateLayout.tsx";
 import LoginPage       from "./web.private/pages/Login.tsx";
+import PerfilPage      from "./web.private/pages/Perfil.tsx";
 
 import PublicLayout    from "./web.public/layout/PublicLayout.tsx";
 import { DestinosPage, HomePage, AboutUSPage, Register, ViajeDetallePage, ExperienciasPage } from "./web.public/pages";
@@ -76,12 +49,14 @@ const ApplicationRouter = (): JSX.Element => {
                     <Route path={"/destinos"}        element={<DestinosPage/>}/>
                     <Route path={"/experiencias"}   element={<ExperienciasPage/>}/>
                     <Route path={"/viaje/detalle"}  element={<ViajeDetallePage/>}/>
+                    <Route path={"/viaje/:id"}      element={<ViajeDetallePage/>}/>
                 </Route>
 
-                {/* ── Rutas privadas (login / registro) ───────────────── */}
+                {/* ── Rutas privadas (login / registro / perfil) ──────── */}
                 <Route element={<PrivateLayout/>}>
                     <Route path={"/login"}    element={<LoginPage/>}/>
                     <Route path={"/register"} element={<Register/>}/>
+                    <Route path={"/perfil"}   element={<PerfilPage/>}/>
                 </Route>
 
                 {/* ── Panel de administración (layout propio) ──────────── */}

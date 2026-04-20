@@ -19,11 +19,31 @@ class Usuario {
         return $stmt->fetch() ?: null;
     }
 
+    public function findPasswordById(int $id): ?string {
+        $stmt = $this->db->prepare('SELECT password FROM usuarios WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        return $row ? $row['password'] : null;
+    }
+
     public function create(string $name, string $email, string $password, string $rol = 'usuario'): int {
         $hash = password_hash($password, PASSWORD_BCRYPT);
         $stmt = $this->db->prepare('INSERT INTO usuarios (name, email, password, rol) VALUES (?, ?, ?, ?)');
         $stmt->execute([$name, $email, $hash, $rol]);
         return (int) $this->db->lastInsertId();
+    }
+
+    public function update(int $id, string $name, string $email): bool {
+        $stmt = $this->db->prepare('UPDATE usuarios SET name = ?, email = ? WHERE id = ?');
+        $stmt->execute([$name, $email, $id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    public function updatePassword(int $id, string $newPassword): bool {
+        $hash = password_hash($newPassword, PASSWORD_BCRYPT);
+        $stmt = $this->db->prepare('UPDATE usuarios SET password = ? WHERE id = ?');
+        $stmt->execute([$hash, $id]);
+        return $stmt->rowCount() > 0;
     }
 
     public function list(): array {

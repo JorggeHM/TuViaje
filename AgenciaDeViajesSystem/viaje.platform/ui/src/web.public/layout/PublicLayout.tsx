@@ -23,14 +23,11 @@ import FooterPublic from "./FooterPublic.tsx";
 import Nav         from "./Nav.tsx";
 import CoverPublic from "./CoverPublic.tsx";
 
-/** Rutas donde el hero banner NO debe mostrarse */
-const SIN_COVER = ["/viaje/detalle"];
-
 const PublicLayout = (): JSX.Element => {
     const { pathname } = useLocation();
 
-    // Muestra el hero en todas las rutas excepto las listadas en SIN_COVER
-    const mostrarCover = !SIN_COVER.includes(pathname);
+    // Ocultar hero en la ficha de detalle de viaje (sea por state o por ID en URL)
+    const mostrarCover = pathname !== "/viaje/detalle" && !pathname.startsWith("/viaje/");
 
     return (
         <div className={"flex min-h-screen flex-col"}>

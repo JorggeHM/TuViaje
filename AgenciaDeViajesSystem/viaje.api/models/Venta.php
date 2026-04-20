@@ -15,6 +15,12 @@ class Venta {
         return (int) $this->db->lastInsertId();
     }
 
+    public function findById(int $id): ?array {
+        $stmt = $this->db->prepare('SELECT * FROM ventas WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function updateEstado(int $id, string $estado): bool {
         $stmt = $this->db->prepare('UPDATE ventas SET estado = ? WHERE id = ?');
         $stmt->execute([$estado, $id]);

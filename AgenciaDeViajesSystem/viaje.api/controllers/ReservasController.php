@@ -25,7 +25,10 @@ class ReservasController {
         $ventaModel   = new Venta();
 
         $reservaId = $reservaModel->create($usuarioId, $viajeId, $monto);
-        $ventaModel->create($usuarioId, $viajeId, $monto);
+        $reservaModel->updateEstado($reservaId, 'Confirmada');
+
+        $ventaId = $ventaModel->create($usuarioId, $viajeId, $monto);
+        $ventaModel->updateEstado($ventaId, 'Confirmada');
 
         $nuevosAsientos = $viaje['available_seats'] - $personas;
         $viajeModel->update($viajeId, ['available_seats' => $nuevosAsientos]);

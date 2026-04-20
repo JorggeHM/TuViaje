@@ -16,7 +16,6 @@ function Register() {
     e.preventDefault();
     setError("");
     setCargando(true);
-
     try {
       await AuthService.register(email, password, name);
       navigate("/");

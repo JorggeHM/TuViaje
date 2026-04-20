@@ -5,11 +5,11 @@ class Database {
 
     public static function connect(): PDO {
         if (self::$instance === null) {
-            $host   = '127.0.0.1';
-            $dbname = 'tuviaje_db';
-            $user   = 'root';
-            $pass   = '';
-            $charset = 'utf8mb4';
+            $host    = getenv('DB_HOST')    ?: '127.0.0.1';
+            $dbname  = getenv('DB_NAME')    ?: 'tuviaje_db';
+            $user    = getenv('DB_USER')    ?: 'root';
+            $pass    = getenv('DB_PASS')    ?: '';
+            $charset = getenv('DB_CHARSET') ?: 'utf8mb4';
 
             $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
             self::$instance = new PDO($dsn, $user, $pass, [

@@ -1,3 +1,8 @@
+# Entorno — nunca versionar credenciales
+.env
+.env.local
+.env.*.local
+
 # Logs
 logs
 *.log

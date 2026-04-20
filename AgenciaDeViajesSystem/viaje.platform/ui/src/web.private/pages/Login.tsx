@@ -123,7 +123,7 @@ function Login() {
                 <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
                   Contraseña
                 </label>
-                <a href="#" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">
+                <a href="/perfil" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">
                   ¿Olvidaste tu contraseña?
                 </a>
               </div>

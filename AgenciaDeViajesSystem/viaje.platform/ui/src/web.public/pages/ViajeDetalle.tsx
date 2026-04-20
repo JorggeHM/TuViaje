@@ -22,8 +22,8 @@
  *
  * NOTA: CoverPublic no se muestra en esta ruta (ver PublicLayout.tsx → SIN_COVER).
  */
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate, useParams } from "react-router";
 import {
   Star, CheckCircle2, Clock, Users, MapPin, CalendarDays,
   Shield, RefreshCw, CreditCard, Heart, ChevronLeft, Plane,
@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import ReservasService from "../../infrastructure/services/reservas.service";
 import AuthService from "../../infrastructure/services/auth.service";
+import ViajesService from "../../infrastructure/services/viajes.service";
 
 const THUMBNAILS_EXTRA = [
   "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=300&q=80",
@@ -54,31 +55,76 @@ const GARANTIAS = [
   { icon: MessageCircle,titulo: "Soporte 24/7",          desc: "Asistencia antes, durante y después" },
 ];
 
+interface ViajeData {
+  id?: number; nombre: string; precio: number; cuposDisponibles: number;
+  personasPorViaje: number; imagenUrl: string; fechaSalida: string;
+  duracionDias: number; rating: number; descripcionCorta: string;
+}
+
 export default function ViajeDetalle() {
   const location  = useLocation();
   const navigate  = useNavigate();
-  const viaje     = location.state as null | {
-    id?: number; nombre: string; precio: number; cuposDisponibles: number;
-    personasPorViaje: number; imagenUrl: string; fechaSalida: string;
-    duracionDias: number; rating: number; descripcionCorta: string;
-  };
+  const { id: paramId } = useParams<{ id: string }>();
 
+  const stateViaje = location.state as ViajeData | null;
+
+  const [viaje,        setViaje]        = useState<ViajeData | null>(stateViaje);
   const [imgActiva,    setImgActiva]    = useState(0);
   const [personas,     setPersonas]     = useState(1);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [cargando,     setCargando]     = useState(false);
   const [confirmado,   setConfirmado]   = useState(false);
-  const [errorMsg,     setErrorMsg]     = useState<string | null>(null);
+  const [errorMsg,      setErrorMsg]      = useState<string | null>(null);
+  const [fetchError,    setFetchError]    = useState(false);
+  const [favMsg,        setFavMsg]        = useState<string | null>(null);
 
-  if (!viaje) {
+  // Si llegamos por URL /viaje/:id sin state, obtener datos de la API
+  useEffect(() => {
+    if (!stateViaje && paramId) {
+      const numId = parseInt(paramId, 10);
+      if (!isNaN(numId)) {
+        ViajesService.obtener(numId)
+          .then((v) => {
+            setViaje({
+              id:               v.id,
+              nombre:           v.title,
+              precio:           v.price,
+              cuposDisponibles: v.available_seats,
+              personasPorViaje: 2,
+              imagenUrl:        v.imagen_url,
+              fechaSalida:      v.start_date,
+              duracionDias:     v.duracion_dias,
+              rating:           v.rating,
+              descripcionCorta: v.description,
+            });
+          })
+          .catch(() => setFetchError(true));
+      }
+    }
+  }, [paramId]);
+
+  if (fetchError) {
     navigate("/destinos");
     return null;
+  }
+
+  if (!viaje) {
+    if (!paramId) {
+      navigate("/destinos");
+      return null;
+    }
+    // Esperando datos de la API
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+      </div>
+    );
   }
 
   const {
     nombre, precio, cuposDisponibles, personasPorViaje,
     imagenUrl, fechaSalida, duracionDias, rating, descripcionCorta,
-  } = viaje;
+  } = viaje as ViajeData;
 
   const galeria    = [imagenUrl, ...THUMBNAILS_EXTRA];
   const cuposBajos = cuposDisponibles <= 5;
@@ -95,14 +141,15 @@ export default function ViajeDetalle() {
   };
 
   const confirmarReserva = async () => {
-    if (!viaje?.id) {
+    if (!viaje?.id && !paramId) {
       setErrorMsg("No se puede identificar el viaje. Volvé al catálogo y seleccionalo de nuevo.");
       return;
     }
     setCargando(true);
     setErrorMsg(null);
     try {
-      await ReservasService.crear(viaje.id, personas);
+      const viajeId = viaje?.id ?? (paramId ? parseInt(paramId, 10) : 0);
+      await ReservasService.crear(viajeId, personas);
       setConfirmado(true);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -344,10 +391,23 @@ export default function ViajeDetalle() {
                   <CreditCard className="w-4 h-4" />
                   {cuposDisponibles === 0 ? "Sin cupos disponibles" : "Reservar ahora"}
                 </button>
-                <button className="w-full py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:border-orange-300 hover:text-orange-600 transition flex items-center justify-center gap-2 text-sm">
+                <button
+                  onClick={() => {
+                    if (!AuthService.isAuthenticated()) {
+                      navigate("/login");
+                    } else {
+                      setFavMsg("¡Favoritos próximamente disponibles!");
+                      setTimeout(() => setFavMsg(null), 3000);
+                    }
+                  }}
+                  className="w-full py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:border-orange-300 hover:text-orange-600 transition flex items-center justify-center gap-2 text-sm"
+                >
                   <Heart className="w-4 h-4" />
                   Agregar a favoritos
                 </button>
+                {favMsg && (
+                  <p className="text-xs text-center text-orange-500 font-medium -mt-1">{favMsg}</p>
+                )}
               </div>
             </div>
 

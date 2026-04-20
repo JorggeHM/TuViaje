@@ -1,8 +1,20 @@
 <?php
 declare(strict_types=1);
 
+// ── Cargar variables de entorno desde .env ────────────────────────────────────
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) continue;
+        [$key, $val] = array_map('trim', explode('=', $line, 2));
+        if ($key !== '') putenv("$key=$val");
+    }
+}
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
-header('Access-Control-Allow-Origin: http://localhost:5173');
+$corsOrigin = getenv('CORS_ORIGIN') ?: 'http://localhost:5173';
+header("Access-Control-Allow-Origin: $corsOrigin");
 header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Credentials: true');
@@ -43,6 +55,10 @@ $router->post('/api/auth/register', [AuthController::class, 'register']);
 $router->get( '/api/auth/me',       [AuthController::class, 'me']);
 $router->post('/api/auth/logout',   [AuthController::class, 'logout']);
 
+// Perfil de usuario
+$router->put('/api/auth/perfil',   [AuthController::class, 'updateProfile']);
+$router->put('/api/auth/password', [AuthController::class, 'updatePassword']);
+
 // Viajes públicos
 $router->get('/api/viajes',      [ViajesController::class, 'index']);
 $router->get('/api/viajes/{id}', [ViajesController::class, 'show']);
@@ -53,9 +69,9 @@ $router->get(  '/api/auth/reservas',     [ReservasController::class, 'misReserva
 $router->patch('/api/reservas/{id}',     [ReservasController::class, 'cancel']);
 
 // Experiencias
-$router->get(  '/api/experiencias',          [ExperienciasController::class, 'index']);
-$router->post( '/api/experiencias',          [ExperienciasController::class, 'store']);
-$router->patch('/api/experiencias/{id}/like',[ExperienciasController::class, 'like']);
+$router->get(  '/api/experiencias',           [ExperienciasController::class, 'index']);
+$router->post( '/api/experiencias',           [ExperienciasController::class, 'store']);
+$router->patch('/api/experiencias/{id}/like', [ExperienciasController::class, 'like']);
 
 // Admin — viajes
 $router->get(   '/api/admin/viajes',               [AdminViajesController::class, 'index']);
@@ -70,8 +86,9 @@ $router->patch( '/api/admin/usuarios/{id}/estado',[AdminUsuariosController::clas
 $router->delete('/api/admin/usuarios/{id}',       [AdminUsuariosController::class, 'destroy']);
 
 // Admin — ventas
-$router->get('/api/admin/ventas',       [AdminVentasController::class, 'index']);
-$router->get('/api/admin/ventas/stats', [AdminVentasController::class, 'stats']);
+$router->get(  '/api/admin/ventas',              [AdminVentasController::class, 'index']);
+$router->get(  '/api/admin/ventas/stats',        [AdminVentasController::class, 'stats']);
+$router->patch('/api/admin/ventas/{id}/estado',  [AdminVentasController::class, 'updateEstado']);
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 try {

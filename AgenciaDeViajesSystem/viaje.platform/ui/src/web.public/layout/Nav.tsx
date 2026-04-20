@@ -145,6 +145,15 @@ function Nav() {
                     </div>
                   )}
 
+                  {/* Mi perfil */}
+                  <div className="px-4 pt-2 pb-1">
+                    <a href="/perfil"
+                      className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-gray-600 text-sm font-semibold hover:bg-gray-50 transition">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                      Mi perfil
+                    </a>
+                  </div>
+
                   {/* Historial de reservas */}
                   <div className="px-4 pt-3 pb-2">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Mis viajes</p>

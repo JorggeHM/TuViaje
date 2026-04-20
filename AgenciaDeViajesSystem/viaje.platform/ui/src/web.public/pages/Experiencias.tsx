@@ -1,17 +1,7 @@
-import { useState, useEffect } from "react";
-import { Star, Upload, ThumbsUp, MessageCircle, MapPin, ImageIcon, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Star, Upload, ThumbsUp, MapPin, ImageIcon, Loader2, X } from "lucide-react";
 import client from "../../infrastructure/api/client";
 import AuthService from "../../infrastructure/services/auth.service";
-
-const DESTINOS = [
-  "Cancún, México",
-  "Medellín, Colombia",
-  "La Habana, Cuba",
-  "Tulum, México",
-  "Cartagena, Colombia",
-  "Buenos Aires, Argentina",
-  "Cusco, Perú",
-];
 
 const FILTROS = [
   { label: "Todas",        valor: 1 },
@@ -77,17 +67,12 @@ function ExperienciaCard({ exp, onLike }: { exp: Experiencia; onLike: (id: numbe
 
       <div className="flex items-center justify-between pt-1 border-t border-gray-100">
         <p className="text-xs text-gray-400">{fecha}</p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onLike(exp.id)}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-orange-50 hover:text-orange-600 border border-gray-200 hover:border-orange-200 transition"
-          >
-            <ThumbsUp className="w-3.5 h-3.5" />{exp.likes}
-          </button>
-          <button className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 border border-gray-200 transition">
-            <MessageCircle className="w-3.5 h-3.5" />Comentar
-          </button>
-        </div>
+        <button
+          onClick={() => onLike(exp.id)}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-orange-50 hover:text-orange-600 border border-gray-200 hover:border-orange-200 transition"
+        >
+          <ThumbsUp className="w-3.5 h-3.5" />{exp.likes}
+        </button>
       </div>
     </div>
   );
@@ -97,9 +82,13 @@ function ExperienciaCard({ exp, onLike }: { exp: Experiencia; onLike: (id: numbe
 export default function Experiencias() {
   const isAuth = AuthService.isAuthenticated();
 
-  const [experiencias,    setExperiencias]    = useState<Experiencia[]>([]);
-  const [cargando,        setCargando]        = useState(true);
-  const [filtroActivo,    setFiltroActivo]    = useState(1);
+  const [experiencias,     setExperiencias]     = useState<Experiencia[]>([]);
+  const [cargando,         setCargando]         = useState(true);
+  const [filtroActivo,     setFiltroActivo]     = useState(1);
+
+  // Destinos disponibles desde las reservas del usuario
+  const [destinos,         setDestinos]         = useState<string[]>([]);
+  const [cargandoDestinos, setCargandoDestinos] = useState(false);
 
   // Formulario
   const [destino,         setDestino]         = useState("");
@@ -109,6 +98,11 @@ export default function Experiencias() {
   const [enviando,        setEnviando]        = useState(false);
   const [errorForm,       setErrorForm]       = useState("");
   const [exitoForm,       setExitoForm]       = useState("");
+
+  // Imagen
+  const [imagenFile,    setImagenFile]    = useState<File | null>(null);
+  const [imagenPreview, setImagenPreview] = useState<string | null>(null);
+  const inputFileRef = useRef<HTMLInputElement>(null);
 
   const MAX_CHARS = 500;
 
@@ -121,27 +115,69 @@ export default function Experiencias() {
       .finally(() => setCargando(false));
   }, [filtroActivo]);
 
+  // Cargar destinos del usuario autenticado desde sus reservas
+  useEffect(() => {
+    if (!isAuth) return;
+    setCargandoDestinos(true);
+    client.get("/api/auth/reservas", { skipAuthRedirect: true } as object)
+      .then((res) => {
+        const reservas: { destination: string; estado: string }[] = res.data.data ?? [];
+        const confirmadas = reservas.filter((r) => r.estado !== "Cancelada");
+        const unicos = [...new Set(confirmadas.map((r) => r.destination))].filter(Boolean);
+        setDestinos(unicos);
+      })
+      .catch(() => {})
+      .finally(() => setCargandoDestinos(false));
+  }, [isAuth]);
+
+  const handleImagenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImagenFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagenPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const quitarImagen = () => {
+    setImagenFile(null);
+    setImagenPreview(null);
+    if (inputFileRef.current) inputFileRef.current.value = "";
+  };
+
   const handlePublicar = async () => {
     setErrorForm("");
     setExitoForm("");
 
-    if (!isAuth) { setErrorForm("Debes iniciar sesión para publicar."); return; }
-    if (!destino) { setErrorForm("Selecciona un destino."); return; }
-    if (ratingSelected === 0) { setErrorForm("Selecciona una calificación."); return; }
+    if (!isAuth)               { setErrorForm("Debes iniciar sesión para publicar."); return; }
+    if (!destino)              { setErrorForm("Selecciona un destino."); return; }
+    if (ratingSelected === 0)  { setErrorForm("Selecciona una calificación."); return; }
     if (texto.trim().length < 10) { setErrorForm("El texto debe tener al menos 10 caracteres."); return; }
 
     setEnviando(true);
     try {
-      const res = await client.post("/api/experiencias", {
-        destino,
-        rating: ratingSelected,
-        texto: texto.trim(),
-      });
+      let res;
+      if (imagenFile) {
+        const formData = new FormData();
+        formData.append("destino", destino);
+        formData.append("rating", String(ratingSelected));
+        formData.append("texto", texto.trim());
+        formData.append("imagen", imagenFile);
+        res = await client.post("/api/experiencias", formData);
+      } else {
+        res = await client.post("/api/experiencias", {
+          destino,
+          rating: ratingSelected,
+          texto: texto.trim(),
+        });
+      }
+
       const nueva: Experiencia = res.data.data;
       setExperiencias((prev) => [nueva, ...prev]);
       setDestino("");
       setRatingSelected(0);
       setTexto("");
+      quitarImagen();
       setExitoForm("¡Experiencia publicada!");
       setTimeout(() => setExitoForm(""), 3000);
     } catch (err: any) {
@@ -206,14 +242,26 @@ export default function Experiencias() {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 ¿Sobre qué destino escribes?
               </label>
-              <select
-                value={destino}
-                onChange={(e) => setDestino(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition bg-white"
-              >
-                <option value="" disabled>Selecciona un destino</option>
-                {DESTINOS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
+              {cargandoDestinos ? (
+                <div className="flex items-center gap-2 py-2.5 text-sm text-gray-400">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Cargando tus viajes...
+                </div>
+              ) : isAuth && destinos.length === 0 ? (
+                <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 text-xs text-gray-500">
+                  Aún no tenés viajes confirmados.{" "}
+                  <a href="/destinos" className="text-orange-500 font-semibold hover:underline">¡Explorá destinos!</a>
+                </div>
+              ) : (
+                <select
+                  value={destino}
+                  onChange={(e) => setDestino(e.target.value)}
+                  disabled={!isAuth}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition bg-white disabled:opacity-60"
+                >
+                  <option value="" disabled>Selecciona un destino</option>
+                  {destinos.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              )}
             </div>
 
             {/* Rating */}
@@ -228,7 +276,8 @@ export default function Experiencias() {
                       onMouseEnter={() => setRatingHover(val)}
                       onMouseLeave={() => setRatingHover(0)}
                       onClick={() => setRatingSelected(val)}
-                      className="transition-transform hover:scale-110"
+                      disabled={!isAuth}
+                      className="transition-transform hover:scale-110 disabled:opacity-60"
                     >
                       <Star className={`w-7 h-7 transition-colors ${activa ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200"}`} />
                     </button>
@@ -238,23 +287,50 @@ export default function Experiencias() {
               </div>
             </div>
 
-            {/* Imagen (UI-only por ahora) */}
+            {/* Imagen */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Foto del viaje <span className="text-gray-400 font-normal">(opcional)</span>
               </label>
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 flex items-center gap-4 bg-gray-50">
-                <div className="w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center flex-shrink-0">
-                  <ImageIcon className="w-6 h-6 text-gray-400" />
-                </div>
-                <div>
-                  <button type="button"
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm cursor-not-allowed opacity-60">
-                    <Upload className="w-3 h-3 inline mr-1" />Seleccionar imagen
+
+              {imagenPreview ? (
+                <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                  <img src={imagenPreview} alt="Vista previa" className="w-full h-36 object-cover" />
+                  <button
+                    type="button"
+                    onClick={quitarImagen}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition"
+                  >
+                    <X className="w-4 h-4" />
                   </button>
-                  <p className="text-[10px] text-gray-400 mt-1.5">Próximamente disponible</p>
+                  <p className="text-[10px] text-gray-400 px-3 py-1.5">{imagenFile?.name}</p>
                 </div>
-              </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 flex items-center gap-4 bg-gray-50">
+                  <div className="w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center flex-shrink-0">
+                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      disabled={!isAuth}
+                      onClick={() => inputFileRef.current?.click()}
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Upload className="w-3 h-3 inline mr-1" />Seleccionar imagen
+                    </button>
+                    <p className="text-[10px] text-gray-400 mt-1.5">JPG, PNG o WEBP · máx 5 MB</p>
+                  </div>
+                </div>
+              )}
+
+              <input
+                ref={inputFileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleImagenChange}
+              />
             </div>
 
             {/* Textarea */}
@@ -264,7 +340,8 @@ export default function Experiencias() {
                 onChange={(e) => setTexto(e.target.value.slice(0, MAX_CHARS))}
                 placeholder="Comparte tu experiencia..."
                 rows={5}
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition resize-none"
+                disabled={!isAuth}
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition resize-none disabled:opacity-60"
               />
               <p className={`text-xs mt-1 text-right ${texto.length >= MAX_CHARS ? "text-red-500" : "text-gray-400"}`}>
                 {texto.length}/{MAX_CHARS} caracteres
@@ -274,7 +351,7 @@ export default function Experiencias() {
             <button
               type="button"
               onClick={handlePublicar}
-              disabled={enviando || !isAuth}
+              disabled={enviando || !isAuth || (isAuth && destinos.length === 0 && !cargandoDestinos)}
               className="w-full py-3 rounded-xl bg-orange-600 text-white font-bold text-sm hover:bg-orange-700 transition shadow-md shadow-orange-900/20 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {enviando ? <><Loader2 className="w-4 h-4 animate-spin" />Publicando...</> : "Publicar experiencia"}

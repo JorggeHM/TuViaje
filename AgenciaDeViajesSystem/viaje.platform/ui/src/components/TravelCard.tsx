@@ -59,7 +59,8 @@ const TravelCard = ({
    * con useLocation().state — sin necesidad de un endpoint por ID.
    */
   const irADetalle = () => {
-    navigate("/viaje/detalle", {
+    const destino = id ? `/viaje/${id}` : "/viaje/detalle";
+    navigate(destino, {
       state: {
         id, nombre, precio, cuposDisponibles, personasPorViaje,
         imagenUrl, fechaSalida, duracionDias, rating, descripcionCorta

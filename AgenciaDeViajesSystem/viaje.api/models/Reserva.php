@@ -43,4 +43,11 @@ class Reserva {
         $stmt->execute([$estado, $id]);
         return $stmt->rowCount() > 0;
     }
+
+    public function updateEstadoByVenta(int $usuarioId, int $viajeId, string $estado): void {
+        $stmt = $this->db->prepare(
+            'UPDATE reservas SET estado = ? WHERE usuario_id = ? AND viaje_id = ? AND estado != "Cancelada"'
+        );
+        $stmt->execute([$estado, $usuarioId, $viajeId]);
+    }
 }
