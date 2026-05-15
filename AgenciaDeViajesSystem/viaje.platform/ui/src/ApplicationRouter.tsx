@@ -1,18 +1,26 @@
 import { type JSX, useEffect } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 
-import PrivateLayout   from "./web.private/layout/PrivateLayout.tsx";
-import LoginPage       from "./web.private/pages/Login.tsx";
-import PerfilPage      from "./web.private/pages/Perfil.tsx";
+import PrivateLayout      from "./web.private/layout/PrivateLayout.tsx";
+import LoginPage          from "./web.private/pages/Login.tsx";
+import PerfilPage         from "./web.private/pages/Perfil.tsx";
+import ForgotPasswordPage from "./web.private/pages/ForgotPassword.tsx";
+import ResetPasswordPage  from "./web.private/pages/ResetPassword.tsx";
 
 import PublicLayout    from "./web.public/layout/PublicLayout.tsx";
-import { DestinosPage, HomePage, AboutUSPage, Register, ViajeDetallePage, ExperienciasPage } from "./web.public/pages";
+import {
+  DestinosPage, HomePage, AboutUSPage, Register, ViajeDetallePage, ExperienciasPage,
+  PagoExitoPage, PagoCanceladoPage,
+} from "./web.public/pages";
 
-import AdminLayout    from "./web.admin/layout/AdminLayout.tsx";
-import AdminResumen   from "./web.admin/pages/AdminResumen.tsx";
-import AdminViajes    from "./web.admin/pages/AdminViajes.tsx";
-import AdminUsuarios  from "./web.admin/pages/AdminUsuarios.tsx";
-import AdminVentas    from "./web.admin/pages/AdminVentas.tsx";
+import AdminLayout       from "./web.admin/layout/AdminLayout.tsx";
+import AdminResumen      from "./web.admin/pages/AdminResumen.tsx";
+import AdminViajes       from "./web.admin/pages/AdminViajes.tsx";
+import AdminUsuarios     from "./web.admin/pages/AdminUsuarios.tsx";
+import AdminVentas       from "./web.admin/pages/AdminVentas.tsx";
+import AdminExperiencias from "./web.admin/pages/AdminExperiencias.tsx";
+import AdminReservas     from "./web.admin/pages/AdminReservas.tsx";
+import AdminCovers       from "./web.admin/pages/AdminCovers.tsx";
 
 /**
  * ScrollToTop — Componente auxiliar sin render visual.
@@ -50,21 +58,28 @@ const ApplicationRouter = (): JSX.Element => {
                     <Route path={"/experiencias"}   element={<ExperienciasPage/>}/>
                     <Route path={"/viaje/detalle"}  element={<ViajeDetallePage/>}/>
                     <Route path={"/viaje/:id"}      element={<ViajeDetallePage/>}/>
+                    <Route path={"/pago/exito"}     element={<PagoExitoPage/>}/>
+                    <Route path={"/pago/cancelado"} element={<PagoCanceladoPage/>}/>
                 </Route>
 
                 {/* ── Rutas privadas (login / registro / perfil) ──────── */}
                 <Route element={<PrivateLayout/>}>
-                    <Route path={"/login"}    element={<LoginPage/>}/>
-                    <Route path={"/register"} element={<Register/>}/>
-                    <Route path={"/perfil"}   element={<PerfilPage/>}/>
+                    <Route path={"/login"}                  element={<LoginPage/>}/>
+                    <Route path={"/register"}               element={<Register/>}/>
+                    <Route path={"/perfil"}                 element={<PerfilPage/>}/>
+                    <Route path={"/forgot-password"}        element={<ForgotPasswordPage/>}/>
+                    <Route path={"/reset-password/:token"}  element={<ResetPasswordPage/>}/>
                 </Route>
 
                 {/* ── Panel de administración (layout propio) ──────────── */}
                 <Route path={"/admin"} element={<AdminLayout/>}>
-                    <Route index             element={<AdminResumen/>}/>
-                    <Route path={"viajes"}   element={<AdminViajes/>}/>
-                    <Route path={"usuarios"} element={<AdminUsuarios/>}/>
-                    <Route path={"ventas"}   element={<AdminVentas/>}/>
+                    <Route index                 element={<AdminResumen/>}/>
+                    <Route path={"viajes"}       element={<AdminViajes/>}/>
+                    <Route path={"usuarios"}     element={<AdminUsuarios/>}/>
+                    <Route path={"reservas"}     element={<AdminReservas/>}/>
+                    <Route path={"ventas"}       element={<AdminVentas/>}/>
+                    <Route path={"experiencias"} element={<AdminExperiencias/>}/>
+                    <Route path={"covers"}       element={<AdminCovers/>}/>
                 </Route>
 
             </Routes>

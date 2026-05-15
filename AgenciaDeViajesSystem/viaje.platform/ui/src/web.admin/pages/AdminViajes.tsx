@@ -3,10 +3,18 @@ import {
   Plus, Search, Pencil, Trash2, CheckSquare,
   X, ImageIcon, Calendar, DollarSign, Users, MapPin,
   AlertTriangle, Loader2,
+  Shield, RefreshCw, BadgeCheck, MessageCircle, Plane, CheckCircle2, Clock, CreditCard,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import client from "../../infrastructure/api/client";
 
 type EstadoViaje = "Activo" | "Pausado" | "Finalizado";
+
+interface Garantia {
+  titulo: string;
+  desc:   string;
+  icon:   string;
+}
 
 interface Viaje {
   id:              number;
@@ -18,20 +26,32 @@ interface Viaje {
   end_date:        string;
   duracion_dias:   number;
   imagen_url:      string;
+  incluidos:       string[]   | null;
+  galeria:         string[]   | null;
+  garantias:       Garantia[] | null;
   estado:          EstadoViaje;
   total_ventas:    number;
 }
 
+/** Catálogo cerrado de íconos disponibles para garantías. */
+export const ICONOS_GARANTIA: Record<string, LucideIcon> = {
+  Shield, RefreshCw, BadgeCheck, MessageCircle, Plane, CheckCircle2, Clock, Users, CreditCard, MapPin,
+};
+const ICONOS_KEYS = Object.keys(ICONOS_GARANTIA);
+
 const FORM_VACIO = {
-  titulo:   "",
-  destino:  "",
-  imagen:   "",
-  salida:   "",
-  fin:      "",
-  duracion: "",
-  precio:   "",
-  plazas:   "",
-  estado:   "Activo" as EstadoViaje,
+  titulo:    "",
+  destino:   "",
+  imagen:    "",
+  salida:    "",
+  fin:       "",
+  duracion:  "",
+  precio:    "",
+  plazas:    "",
+  estado:    "Activo" as EstadoViaje,
+  incluidos: "",   // texto multilinea (una por línea)
+  galeria:   "",   // texto multilinea (una URL por línea)
+  garantias: [] as Garantia[],
 };
 
 function BadgeEstado({ estado }: { estado: EstadoViaje }) {
@@ -47,7 +67,6 @@ function BadgeEstado({ estado }: { estado: EstadoViaje }) {
   );
 }
 
-// Movido FUERA del componente para evitar el bug de pérdida de foco
 function Campo({ label, value, onChange, type = "text", placeholder, prefix }: {
   label: string; value: string; onChange: (v: string) => void;
   type?: string; placeholder?: string; prefix?: string;
@@ -70,6 +89,78 @@ function Campo({ label, value, onChange, type = "text", placeholder, prefix }: {
     </div>
   );
 }
+
+function EditorGarantias({
+  garantias, onChange,
+}: { garantias: Garantia[]; onChange: (g: Garantia[]) => void }) {
+  const agregar = () => onChange([...garantias, { titulo: "", desc: "", icon: ICONOS_KEYS[0] }]);
+  const quitar  = (i: number) => onChange(garantias.filter((_, idx) => idx !== i));
+  const actualizar = (i: number, patch: Partial<Garantia>) =>
+    onChange(garantias.map((g, idx) => idx === i ? { ...g, ...patch } : g));
+
+  return (
+    <div className="space-y-3">
+      {garantias.length === 0 && (
+        <p className="text-xs text-gray-400 italic">Sin garantías cargadas. Si dejás esto vacío se mostrará el set genérico.</p>
+      )}
+
+      {garantias.map((g, i) => {
+        const Icon = ICONOS_GARANTIA[g.icon] ?? Shield;
+        return (
+          <div key={i} className="rounded-xl border border-gray-200 p-3 space-y-2 bg-gray-50/40">
+            <div className="flex items-center gap-2">
+              <Icon className="w-4 h-4 text-orange-500 flex-shrink-0" />
+              <select
+                value={g.icon}
+                onChange={(e) => actualizar(i, { icon: e.target.value })}
+                className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 bg-white focus:outline-none focus:border-orange-400"
+              >
+                {ICONOS_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+              </select>
+              <input
+                type="text"
+                value={g.titulo}
+                onChange={(e) => actualizar(i, { titulo: e.target.value })}
+                placeholder="Título"
+                className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:border-orange-400 bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => quitar(i)}
+                className="p-1 rounded text-gray-400 hover:text-red-600 transition"
+                title="Quitar"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={g.desc}
+              onChange={(e) => actualizar(i, { desc: e.target.value })}
+              placeholder="Descripción corta"
+              className="w-full rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:border-orange-400 bg-white"
+            />
+          </div>
+        );
+      })}
+
+      <button
+        type="button"
+        onClick={agregar}
+        className="w-full py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-orange-400 hover:text-orange-600 transition flex items-center justify-center gap-1.5"
+      >
+        <Plus className="w-3.5 h-3.5" /> Agregar garantía
+      </button>
+    </div>
+  );
+}
+
+/** Convierte texto multilinea a array de líneas no vacías. */
+const linesToArr = (s: string): string[] =>
+  s.split("\n").map((l) => l.trim()).filter(Boolean);
+
+const arrToLines = (arr: string[] | null | undefined): string =>
+  Array.isArray(arr) ? arr.join("\n") : "";
 
 export default function AdminViajes() {
   const [viajes,        setViajes]        = useState<Viaje[]>([]);
@@ -105,7 +196,7 @@ export default function AdminViajes() {
   });
 
   const abrirModalCrear = () => {
-    setForm({ ...FORM_VACIO });
+    setForm({ ...FORM_VACIO, garantias: [] });
     setModoEditar(false);
     setViajeEditando(null);
     setModalAbierto(true);
@@ -113,15 +204,18 @@ export default function AdminViajes() {
 
   const abrirModalEditar = (v: Viaje) => {
     setForm({
-      titulo:   v.title,
-      destino:  v.destination,
-      imagen:   v.imagen_url ?? "",
-      salida:   v.start_date,
-      fin:      v.end_date,
-      duracion: String(v.duracion_dias),
-      precio:   String(v.price),
-      plazas:   String(v.available_seats),
-      estado:   v.estado,
+      titulo:    v.title,
+      destino:   v.destination,
+      imagen:    v.imagen_url ?? "",
+      salida:    v.start_date,
+      fin:       v.end_date,
+      duracion:  String(v.duracion_dias),
+      precio:    String(v.price),
+      plazas:    String(v.available_seats),
+      estado:    v.estado,
+      incluidos: arrToLines(v.incluidos),
+      galeria:   arrToLines(v.galeria),
+      garantias: Array.isArray(v.garantias) ? v.garantias : [],
     });
     setModoEditar(true);
     setViajeEditando(v.id);
@@ -131,6 +225,10 @@ export default function AdminViajes() {
   const guardarViaje = async () => {
     if (!form.titulo || !form.destino || !form.salida || !form.fin) return;
     setGuardando(true);
+
+    // Normaliza garantías: si una entrada tiene título y descripción vacíos, se descarta.
+    const garantiasLimpias = form.garantias.filter((g) => g.titulo.trim() || g.desc.trim());
+
     const payload = {
       title:           form.titulo,
       destination:     form.destino,
@@ -141,6 +239,9 @@ export default function AdminViajes() {
       price:           Number(form.precio),
       available_seats: Number(form.plazas),
       estado:          form.estado,
+      incluidos:       linesToArr(form.incluidos),
+      galeria:         linesToArr(form.galeria),
+      garantias:       garantiasLimpias,
     };
     try {
       if (modoEditar && viajeEditando !== null) {
@@ -356,7 +457,7 @@ export default function AdminViajes() {
                 <Campo label="Nombre del viaje *" value={form.titulo}  onChange={f("titulo")}  placeholder="Ej. Aventura en Cancún" />
                 <Campo label="Destino *"           value={form.destino} onChange={f("destino")} placeholder="Ej. Cancún, México" />
               </div>
-              <Campo label="URL de imagen (opcional)" value={form.imagen} onChange={f("imagen")} placeholder="https://..." />
+              <Campo label="URL de imagen principal" value={form.imagen} onChange={f("imagen")} placeholder="https://..." />
               {form.imagen && (
                 <div className="w-full h-32 rounded-xl overflow-hidden bg-gray-100">
                   <img src={form.imagen} alt="Preview" className="w-full h-full object-cover"
@@ -384,6 +485,49 @@ export default function AdminViajes() {
                     <option value="Pausado">Pausado</option>
                     <option value="Finalizado">Finalizado</option>
                   </select>
+                </div>
+              </div>
+
+              {/* ─── Contenido editable (incluidos / galería / garantías) ─── */}
+              <div className="pt-3 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-700 mb-3">Contenido de la ficha</p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      Qué incluye este viaje <span className="font-normal text-gray-400">(una línea por ítem)</span>
+                    </label>
+                    <textarea
+                      value={form.incluidos}
+                      onChange={(e) => setForm((prev) => ({ ...prev, incluidos: e.target.value }))}
+                      placeholder={"Vuelo de ida y vuelta\nHotel con desayuno\nTraslados aeropuerto-hotel"}
+                      rows={4}
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition resize-none font-mono"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Si dejás esto vacío se mostrará el set genérico.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      Galería de imágenes <span className="font-normal text-gray-400">(una URL por línea)</span>
+                    </label>
+                    <textarea
+                      value={form.galeria}
+                      onChange={(e) => setForm((prev) => ({ ...prev, galeria: e.target.value }))}
+                      placeholder={"https://...\nhttps://..."}
+                      rows={4}
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition resize-none font-mono"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">La imagen principal ya se muestra primero. Acá agregás miniaturas extras.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Garantías destacadas</label>
+                    <EditorGarantias
+                      garantias={form.garantias}
+                      onChange={(g) => setForm((prev) => ({ ...prev, garantias: g }))}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

@@ -28,6 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/jwt.php';
 require_once __DIR__ . '/helpers/JWT.php';
+require_once __DIR__ . '/helpers/Mailer.php';
+require_once __DIR__ . '/helpers/Stripe.php';
+require_once __DIR__ . '/helpers/MaintenanceJobs.php';
 require_once __DIR__ . '/core/Response.php';
 require_once __DIR__ . '/core/Request.php';
 require_once __DIR__ . '/core/Middleware.php';
@@ -37,13 +40,24 @@ require_once __DIR__ . '/models/Viaje.php';
 require_once __DIR__ . '/models/Venta.php';
 require_once __DIR__ . '/models/Reserva.php';
 require_once __DIR__ . '/models/Experiencia.php';
+require_once __DIR__ . '/models/PasswordReset.php';
+require_once __DIR__ . '/models/Favorito.php';
+require_once __DIR__ . '/models/CoverImagen.php';
 require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/ViajesController.php';
 require_once __DIR__ . '/controllers/ReservasController.php';
 require_once __DIR__ . '/controllers/ExperienciasController.php';
+require_once __DIR__ . '/controllers/StatsController.php';
+require_once __DIR__ . '/controllers/FavoritosController.php';
+require_once __DIR__ . '/controllers/StripeWebhookController.php';
+require_once __DIR__ . '/controllers/CoversController.php';
 require_once __DIR__ . '/controllers/admin/AdminViajesController.php';
 require_once __DIR__ . '/controllers/admin/AdminUsuariosController.php';
 require_once __DIR__ . '/controllers/admin/AdminVentasController.php';
+require_once __DIR__ . '/controllers/admin/AdminExperienciasController.php';
+require_once __DIR__ . '/controllers/admin/AdminReservasController.php';
+require_once __DIR__ . '/controllers/admin/AdminCoversController.php';
+require_once __DIR__ . '/controllers/admin/AdminMaintenanceController.php';
 
 // ── Rutas ─────────────────────────────────────────────────────────────────────
 $router  = new Router();
@@ -56,22 +70,46 @@ $router->get( '/api/auth/me',       [AuthController::class, 'me']);
 $router->post('/api/auth/logout',   [AuthController::class, 'logout']);
 
 // Perfil de usuario
-$router->put('/api/auth/perfil',   [AuthController::class, 'updateProfile']);
-$router->put('/api/auth/password', [AuthController::class, 'updatePassword']);
+$router->put(   '/api/auth/perfil',   [AuthController::class, 'updateProfile']);
+$router->put(   '/api/auth/password', [AuthController::class, 'updatePassword']);
+$router->post(  '/api/auth/avatar',   [AuthController::class, 'updateAvatar']);
+$router->delete('/api/auth/avatar',   [AuthController::class, 'removeAvatar']);
+
+// Recuperación de contraseña (público)
+$router->post('/api/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+$router->post('/api/auth/reset-password',  [AuthController::class, 'resetPassword']);
 
 // Viajes públicos
 $router->get('/api/viajes',      [ViajesController::class, 'index']);
 $router->get('/api/viajes/{id}', [ViajesController::class, 'show']);
 
+// Estadísticas públicas
+$router->get('/api/stats', [StatsController::class, 'index']);
+
+// Imágenes del header (público)
+$router->get('/api/covers', [CoversController::class, 'index']);
+
+// Webhook Stripe (sin auth — verificación por firma HMAC)
+$router->post('/api/stripe/webhook', [StripeWebhookController::class, 'handle']);
+
 // Reservas
 $router->post( '/api/reservas',          [ReservasController::class, 'store']);
+$router->get(  '/api/reservas/status',   [ReservasController::class, 'status']);
 $router->get(  '/api/auth/reservas',     [ReservasController::class, 'misReservas']);
 $router->patch('/api/reservas/{id}',     [ReservasController::class, 'cancel']);
 
+// Favoritos
+$router->get(   '/api/favoritos',              [FavoritosController::class, 'index']);
+$router->get(   '/api/favoritos/ids',          [FavoritosController::class, 'ids']);
+$router->post(  '/api/favoritos',              [FavoritosController::class, 'store']);
+$router->delete('/api/favoritos/{viajeId}',    [FavoritosController::class, 'destroy']);
+
 // Experiencias
-$router->get(  '/api/experiencias',           [ExperienciasController::class, 'index']);
-$router->post( '/api/experiencias',           [ExperienciasController::class, 'store']);
-$router->patch('/api/experiencias/{id}/like', [ExperienciasController::class, 'like']);
+$router->get(   '/api/experiencias',           [ExperienciasController::class, 'index']);
+$router->post(  '/api/experiencias',           [ExperienciasController::class, 'store']);
+$router->put(   '/api/experiencias/{id}',      [ExperienciasController::class, 'update']);
+$router->delete('/api/experiencias/{id}',      [ExperienciasController::class, 'destroy']);
+$router->patch( '/api/experiencias/{id}/like', [ExperienciasController::class, 'like']);
 
 // Admin — viajes
 $router->get(   '/api/admin/viajes',               [AdminViajesController::class, 'index']);
@@ -89,6 +127,26 @@ $router->delete('/api/admin/usuarios/{id}',       [AdminUsuariosController::clas
 $router->get(  '/api/admin/ventas',              [AdminVentasController::class, 'index']);
 $router->get(  '/api/admin/ventas/stats',        [AdminVentasController::class, 'stats']);
 $router->patch('/api/admin/ventas/{id}/estado',  [AdminVentasController::class, 'updateEstado']);
+$router->post( '/api/admin/ventas/{id}/refund',  [AdminVentasController::class, 'refund']);
+
+// Admin — experiencias
+$router->get(   '/api/admin/experiencias',                [AdminExperienciasController::class, 'index']);
+$router->patch( '/api/admin/experiencias/{id}/visible',   [AdminExperienciasController::class, 'toggleVisible']);
+$router->delete('/api/admin/experiencias/{id}',           [AdminExperienciasController::class, 'destroy']);
+
+// Admin — reservas
+$router->get(   '/api/admin/reservas',                    [AdminReservasController::class, 'index']);
+$router->patch( '/api/admin/reservas/{id}/estado',        [AdminReservasController::class, 'updateEstado']);
+$router->delete('/api/admin/reservas/{id}',               [AdminReservasController::class, 'destroy']);
+
+// Admin — imágenes del header
+$router->get(   '/api/admin/covers',                      [AdminCoversController::class, 'index']);
+$router->post(  '/api/admin/covers',                      [AdminCoversController::class, 'store']);
+$router->patch( '/api/admin/covers/{id}/visible',         [AdminCoversController::class, 'toggleVisible']);
+$router->delete('/api/admin/covers/{id}',                 [AdminCoversController::class, 'destroy']);
+
+// Admin — mantenimiento
+$router->post('/api/admin/maintenance/cleanup-pendientes', [AdminMaintenanceController::class, 'cleanupPendientes']);
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 try {

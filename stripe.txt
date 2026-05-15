@@ -1,0 +1,31 @@
+  Backend
+  - DB: columna stripe_session_id en reservas (migration_stripe_sessions.sql).
+  - viaje.api/helpers/Stripe.php: cliente mínimo con cURL — createCheckoutSession() y verifyWebhookSignature() (HMAC-SHA256, tolerancia 5 min). Sin SDK.
+  - viaje.api/models/Reserva.php: setStripeSession(), findByStripeSessionId().
+  - ReservasController::store cambia: ahora crea reserva en Pendiente, decrementa cupos, crea Checkout Session y devuelve {reserva_id, url}. Si Stripe falla, hace rollback (libera cupos + borra reserva).
+  - viaje.api/controllers/StripeWebhookController.php: handle() idempotente — checkout.session.completed → Confirmada + crea Venta + email; expired/async_payment_failed → Cancelada + libera cupos.
+  - Ruta POST /api/stripe/webhook (sin auth, verifica firma).
+  - .env.example actualizado con STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET.
+
+  Frontend
+  - reservas.service.ts: crear() ahora devuelve CheckoutResponse {reserva_id, url}.
+  - ViajeDetalle.tsx: el modal ya no muestra "reserva confirmada" — al confirmar, redirige a Stripe Checkout. Botón ahora es "Pagar con Stripe".
+  - Páginas nuevas /pago/exito y /pago/cancelado (PagoExito.tsx, PagoCancelado.tsx).
+  - Test reservas.service.test.ts actualizado para la nueva forma de respuesta.
+
+  Validaciones: tsc -b EXIT 0, vitest 31/31, backend 36/36.
+
+  Para activar (pasos manuales requeridos):
+
+  1. Correr la migración en MySQL:
+  source viaje.database/migration_stripe_sessions.sql;
+  2. Crear cuenta Stripe (gratis) y obtener claves de Test en https://dashboard.stripe.com/test/apikeys.
+  3. Editar viaje.api/.env:
+  STRIPE_SECRET_KEY=sk_test_...
+  STRIPE_WEBHOOK_SECRET=  (lo configurás en el paso 4)
+  APP_URL=http://localhost:5173
+  4. Para recibir webhooks en localhost durante desarrollo, instalar Stripe CLI (https://stripe.com/docs/stripe-cli) y correr:
+  ! stripe login
+  ! stripe listen --forward-to http://localhost/AgenciaDeViajesSystem/viaje.api/api/stripe/webhook
+  4. El comando imprime un whsec_... → ese es el STRIPE_WEBHOOK_SECRET. Mantener corriendo mientras se prueba.
+  5. Tarjeta de test para pagar: 4242 4242 4242 4242, cualquier CVC, fecha futura.

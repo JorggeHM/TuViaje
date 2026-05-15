@@ -24,28 +24,36 @@ import {
   Plane,
   Users,
   TrendingUp,
+  MessageSquare,
+  Receipt,
+  Image as ImageIcon,
   LogOut,
   Menu,
   X,
   ChevronRight,
-  Bell,
 } from "lucide-react";
-import AuthService from "../../infrastructure/services/auth.service";
+import { useAuth } from "../../infrastructure/auth/AuthContext";
 
 // ── Definición de ítems del menú lateral ─────────────────────────────────────
 const NAV_ITEMS = [
-  { to: "/admin",           label: "Resumen",   icon: LayoutDashboard, end: true  },
-  { to: "/admin/viajes",    label: "Viajes",    icon: Plane,           end: false },
-  { to: "/admin/usuarios",  label: "Usuarios",  icon: Users,           end: false },
-  { to: "/admin/ventas",    label: "Ventas",    icon: TrendingUp,      end: false },
+  { to: "/admin",              label: "Resumen",      icon: LayoutDashboard, end: true  },
+  { to: "/admin/viajes",       label: "Viajes",       icon: Plane,           end: false },
+  { to: "/admin/usuarios",     label: "Usuarios",     icon: Users,           end: false },
+  { to: "/admin/reservas",     label: "Reservas",     icon: Receipt,         end: false },
+  { to: "/admin/ventas",       label: "Ventas",       icon: TrendingUp,      end: false },
+  { to: "/admin/experiencias", label: "Experiencias", icon: MessageSquare,   end: false },
+  { to: "/admin/covers",       label: "Hero",         icon: ImageIcon,       end: false },
 ];
 
 // ── Mapa de títulos para el topbar ────────────────────────────────────────────
 const TITULOS: Record<string, string> = {
-  "/admin":            "Resumen general",
-  "/admin/viajes":     "Gestión de viajes",
-  "/admin/usuarios":   "Gestión de usuarios",
-  "/admin/ventas":     "Reporte de ventas",
+  "/admin":              "Resumen general",
+  "/admin/viajes":       "Gestión de viajes",
+  "/admin/usuarios":     "Gestión de usuarios",
+  "/admin/reservas":     "Gestión de reservas",
+  "/admin/ventas":       "Reporte de ventas",
+  "/admin/experiencias": "Moderación de experiencias",
+  "/admin/covers":       "Imágenes del header",
 };
 
 export default function AdminLayout() {
@@ -53,10 +61,10 @@ export default function AdminLayout() {
   const navigate     = useNavigate();
   const { pathname } = useLocation();
 
-  const adminUser = AuthService.getUser();
+  const { user: adminUser, isAuthenticated, isAdmin, logout } = useAuth();
 
-  if (!AuthService.isAuthenticated()) return <Navigate to="/login" replace />;
-  if (!AuthService.isAdmin())         return <Navigate to="/"      replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAdmin)         return <Navigate to="/"      replace />;
 
   const tituloPagina = TITULOS[pathname] ?? "Panel de administración";
 
@@ -143,7 +151,7 @@ export default function AdminLayout() {
           </div>
           {/* Botón cerrar sesión */}
           <button
-            onClick={async () => { await AuthService.logout(); navigate("/login"); }}
+            onClick={async () => { await logout(); navigate("/login"); }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-red-50 hover:text-red-600 transition"
           >
             <LogOut className="w-4 h-4" />
@@ -172,13 +180,10 @@ export default function AdminLayout() {
 
           {/* Acciones del topbar */}
           <div className="flex items-center gap-3">
-            {/* Notificaciones */}
-            <button className="relative p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition">
-              <Bell className="w-5 h-5" />
-              {/* Badge de notificación */}
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full" />
-            </button>
-            {/* Avatar */}
+            <div className="hidden sm:block text-right">
+              <p className="text-xs font-bold text-gray-900 leading-tight">{adminUser?.name ?? "Admin"}</p>
+              <p className="text-[10px] text-gray-400 leading-tight">{adminUser?.email ?? ""}</p>
+            </div>
             <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-white text-xs font-black">
               {adminUser?.name?.slice(0, 2).toUpperCase() ?? "AD"}
             </div>

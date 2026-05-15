@@ -14,7 +14,7 @@ class Usuario {
     }
 
     public function findById(int $id): ?array {
-        $stmt = $this->db->prepare('SELECT id, name, email, rol, activo, created_at FROM usuarios WHERE id = ? LIMIT 1');
+        $stmt = $this->db->prepare('SELECT id, name, email, rol, avatar_url, activo, created_at FROM usuarios WHERE id = ? LIMIT 1');
         $stmt->execute([$id]);
         return $stmt->fetch() ?: null;
     }
@@ -46,13 +46,19 @@ class Usuario {
         return $stmt->rowCount() > 0;
     }
 
+    public function updateAvatar(int $id, ?string $url): bool {
+        $stmt = $this->db->prepare('UPDATE usuarios SET avatar_url = ? WHERE id = ?');
+        $stmt->execute([$url, $id]);
+        return $stmt->rowCount() > 0;
+    }
+
     public function list(): array {
-        $sql = 'SELECT u.id, u.name, u.email, u.rol, u.activo, u.created_at,
+        $sql = "SELECT u.id, u.name, u.email, u.rol, u.activo, u.created_at,
                        COUNT(v.id) AS total_compras
                 FROM usuarios u
-                LEFT JOIN ventas v ON v.usuario_id = u.id
+                LEFT JOIN ventas v ON v.usuario_id = u.id AND v.estado = 'Confirmada'
                 GROUP BY u.id
-                ORDER BY u.created_at DESC';
+                ORDER BY u.created_at DESC";
         return $this->db->query($sql)->fetchAll();
     }
 

@@ -90,4 +90,75 @@ class ExperienciasController {
 
         Response::success(null, 'Like registrado');
     }
+
+    public static function update(Request $request): void {
+        Middleware::auth($request);
+
+        $id = (int) ($request->params['id'] ?? 0);
+        if ($id <= 0) Response::error('ID inválido', 400);
+
+        $model = new Experiencia();
+        $exp   = $model->findById($id);
+        if (!$exp) Response::error('Experiencia no encontrada', 404);
+
+        $usuarioId = (int) $request->user['sub'];
+        $esAdmin   = ($request->user['rol'] ?? '') === 'admin';
+        if ((int) $exp['usuario_id'] !== $usuarioId && !$esAdmin) {
+            Response::error('No tenés permiso para editar esta experiencia', 403);
+        }
+
+        $data = [];
+        if (isset($request->body['destino'])) {
+            $destino = trim((string) $request->body['destino']);
+            if ($destino === '') Response::error('El destino no puede estar vacío');
+            $data['destino'] = $destino;
+        }
+        if (isset($request->body['rating'])) {
+            $rating = (int) $request->body['rating'];
+            if ($rating < 1 || $rating > 5) Response::error('El rating debe estar entre 1 y 5');
+            $data['rating'] = $rating;
+        }
+        if (isset($request->body['texto'])) {
+            $texto = trim((string) $request->body['texto']);
+            if ($texto === '') Response::error('El texto no puede estar vacío');
+            $data['texto'] = $texto;
+        }
+
+        if (empty($data)) Response::error('No hay cambios para guardar');
+
+        $model->update($id, $data);
+
+        $experiencias = $model->list(1);
+        $actualizada  = array_values(array_filter($experiencias, fn($e) => (int) $e['id'] === $id))[0] ?? null;
+        Response::success($actualizada, 'Experiencia actualizada');
+    }
+
+    public static function destroy(Request $request): void {
+        Middleware::auth($request);
+
+        $id = (int) ($request->params['id'] ?? 0);
+        if ($id <= 0) Response::error('ID inválido', 400);
+
+        $model = new Experiencia();
+        $exp   = $model->findById($id);
+        if (!$exp) Response::error('Experiencia no encontrada', 404);
+
+        $usuarioId = (int) $request->user['sub'];
+        $esAdmin   = ($request->user['rol'] ?? '') === 'admin';
+        if ((int) $exp['usuario_id'] !== $usuarioId && !$esAdmin) {
+            Response::error('No tenés permiso para eliminar esta experiencia', 403);
+        }
+
+        // Borrado best-effort de la imagen subida al servidor (si aplica)
+        if (!empty($exp['imagen'])) {
+            $filename = basename(parse_url($exp['imagen'], PHP_URL_PATH) ?? '');
+            $path     = __DIR__ . '/../uploads/experiencias/' . $filename;
+            if ($filename !== '' && is_file($path)) {
+                @unlink($path);
+            }
+        }
+
+        $model->delete($id);
+        Response::success(null, 'Experiencia eliminada');
+    }
 }

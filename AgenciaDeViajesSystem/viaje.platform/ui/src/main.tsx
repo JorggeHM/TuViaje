@@ -18,6 +18,7 @@
 import { StrictMode }            from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import ApplicationRouter         from './ApplicationRouter.tsx'
+import { AuthProvider }          from './infrastructure/auth/AuthContext.tsx'
 import './assets/css/main.css'   // Estilos globales con Tailwind CSS
 
 // Obtiene el nodo raíz del DOM definido en index.html
@@ -28,6 +29,8 @@ const site: Root = createRoot(element!);
 
 site.render(
     <StrictMode>
-        <ApplicationRouter/>
+        <AuthProvider>
+            <ApplicationRouter/>
+        </AuthProvider>
     </StrictMode>
 );

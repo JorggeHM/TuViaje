@@ -13,6 +13,17 @@ class Middleware {
         } catch (\Exception $e) {
             Response::error($e->getMessage(), 401);
         }
+
+        // Revalidación contra BD: el JWT puede seguir siendo válido criptográficamente
+        // pero la cuenta haber sido desactivada o eliminada por el admin desde su emisión.
+        $usuario = (new Usuario())->findById((int) ($payload['sub'] ?? 0));
+        if (!$usuario) {
+            Response::error('La cuenta ya no existe', 401);
+        }
+        if (!$usuario['activo']) {
+            // 401 (no 403) para que el interceptor del frontend cierre sesión y redirija al login.
+            Response::error('Cuenta desactivada', 401);
+        }
     }
 
     public static function adminOnly(Request $request): void {

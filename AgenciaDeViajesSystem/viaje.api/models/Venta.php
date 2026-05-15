@@ -27,6 +27,25 @@ class Venta {
         return $stmt->rowCount() > 0;
     }
 
+    /** Sincroniza el estado de la venta cuando se cambia el de su reserva (par usuario+viaje). */
+    public function updateEstadoByPair(int $usuarioId, int $viajeId, string $estado): void {
+        $stmt = $this->db->prepare(
+            'UPDATE ventas SET estado = ? WHERE usuario_id = ? AND viaje_id = ? AND estado != "Cancelada"'
+        );
+        $stmt->execute([$estado, $usuarioId, $viajeId]);
+    }
+
+    /** Última venta NO cancelada para un par usuario+viaje. Útil al refundar. */
+    public function findActiveByUsuarioViaje(int $usuarioId, int $viajeId): ?array {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM ventas
+             WHERE usuario_id = ? AND viaje_id = ? AND estado != 'Cancelada'
+             ORDER BY fecha DESC LIMIT 1"
+        );
+        $stmt->execute([$usuarioId, $viajeId]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function list(array $filters = []): array {
         $sql    = 'SELECT vt.*, u.name AS usuario_nombre, u.email AS usuario_email,
                           vi.title AS viaje_titulo, vi.destination AS viaje_destino

@@ -1,63 +1,42 @@
 /**
- * auth.service.ts — Servicio de autenticación
+ * auth.service.ts — Cliente HTTP de autenticación
  *
- * Centraliza toda la lógica relacionada con el login, registro y
- * gestión de sesión del usuario. Usa el cliente Axios configurado
- * en infrastructure/api/client.ts.
+ * Solo expone métodos que hablan con la API. El estado del usuario y los
+ * helpers reactivos (isAuthenticated, isAdmin, user) viven en AuthContext.
  *
- * Endpoints que consume:
- *   POST /auth/login    → autentica y devuelve un token JWT
- *   POST /auth/register → crea una nueva cuenta
- *   GET  /auth/me       → devuelve los datos del usuario autenticado
- *   POST /auth/logout   → invalida la sesión en el servidor
+ * Endpoints:
+ *   POST /auth/login            → autentica y devuelve un token JWT
+ *   POST /auth/register         → crea cuenta nueva
+ *   GET  /auth/me               → datos del usuario autenticado
+ *   POST /auth/logout           → invalida la sesión en el servidor
+ *   POST /auth/forgot-password  → solicita link de reset por email
+ *   POST /auth/reset-password   → restablece la contraseña con un token
  *
- * El token JWT se guarda en localStorage con la clave 'token'.
- * El interceptor de Axios en client.ts lo adjunta automáticamente
- * a cada petición HTTP posterior.
- *
- * Uso desde un componente:
- *   import AuthService from '@/infrastructure/services/auth.service';
- *   await AuthService.login('user@mail.com', '123456');
- *   const estaLogueado = AuthService.isAuthenticated();
+ * El token se persiste en localStorage['token'] (lo lee el interceptor
+ * de Axios en client.ts para adjuntarlo a cada request).
  */
-import client from '../../infrastructure/api/client';
+import client from '../api/client';
 
 export interface LoginRequest {
     email: string;
     password: string;
 }
 
-export interface User {
-    id: number;
-    email: string;
-    name: string;
-    rol: 'usuario' | 'admin';
-}
-
 class AuthService {
 
-    /**
-     * Autentica al usuario con email y contraseña.
-     * Si el servidor devuelve un token, lo guarda en localStorage.
-     * El token es luego adjuntado automáticamente por el interceptor de Axios.
-     */
     static async login(email: string, password: string) {
         const response = await client.post('/api/auth/login', { email, password });
-
         if (response.data.data.token) {
             localStorage.setItem('token', response.data.data.token);
         }
-
         return response.data.data;
     }
 
     static async register(email: string, password: string, name: string) {
         const response = await client.post('/api/auth/register', { email, password, name });
-
         if (response.data.data?.token) {
             localStorage.setItem('token', response.data.data.token);
         }
-
         return response.data.data;
     }
 
@@ -67,45 +46,51 @@ class AuthService {
     }
 
     static async logout() {
-        await client.post('/api/auth/logout');
+        // Best-effort: si el servidor falla igual cerramos sesión local
+        try {
+            await client.post('/api/auth/logout');
+        } catch {
+            // ignorado — el logout local debe completarse de todos modos
+        }
         localStorage.removeItem('token');
     }
 
-    /** Devuelve el token JWT almacenado en localStorage, o null si no existe. */
-    static getToken() {
-        return localStorage.getItem('token');
+    static async forgotPassword(email: string) {
+        const response = await client.post('/api/auth/forgot-password', { email });
+        return response.data;
     }
 
-    /** Devuelve true si hay un token guardado (el usuario está "logueado"). */
-    static isAuthenticated() {
-        return !!this.getToken();
+    static async resetPassword(token: string, newPassword: string) {
+        const response = await client.post('/api/auth/reset-password', {
+            token,
+            new_password: newPassword,
+        });
+        return response.data;
     }
 
-    /** Decodifica el payload del JWT y lo devuelve, sin validar firma. */
-    static getUser(): User | null {
-        const token = this.getToken();
-        if (!token) return null;
-        try {
-            // JWT usa base64url (sin padding =). atob() requiere base64 estándar.
-            const segment = token.split('.')[1]
-                .replace(/-/g, '+')
-                .replace(/_/g, '/')
-                .padEnd(Math.ceil(token.split('.')[1].length / 4) * 4, '=');
-            const payload = JSON.parse(atob(segment));
-            return {
-                id:    payload.sub,
-                email: payload.email,
-                name:  payload.name,
-                rol:   payload.rol ?? 'usuario',
-            };
-        } catch {
-            return null;
+    /** Sube una imagen como foto de perfil. Devuelve el usuario y rota el token. */
+    static async subirAvatar(file: File) {
+        const form = new FormData();
+        form.append('imagen', file);
+        // Pisamos el Content-Type heredado de la instancia (application/json) con
+        // undefined para que axios + el navegador generen "multipart/form-data;
+        // boundary=...". Si se setea manualmente sin boundary, PHP no parsea $_FILES.
+        const response = await client.post('/api/auth/avatar', form, {
+            headers: { 'Content-Type': undefined } as never,
+        });
+        if (response.data.data?.token) {
+            localStorage.setItem('token', response.data.data.token);
         }
+        return response.data.data;
     }
 
-    /** Devuelve true si el usuario autenticado tiene rol admin. */
-    static isAdmin() {
-        return this.getUser()?.rol === 'admin';
+    /** Elimina la foto de perfil actual. */
+    static async eliminarAvatar() {
+        const response = await client.delete('/api/auth/avatar');
+        if (response.data.data?.token) {
+            localStorage.setItem('token', response.data.data.token);
+        }
+        return response.data.data;
     }
 }
 

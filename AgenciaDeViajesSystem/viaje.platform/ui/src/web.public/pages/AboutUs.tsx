@@ -1,135 +1,178 @@
 /**
  * AboutUs.tsx — Página "Sobre Nosotros" (ruta: /nosotros)
- *
- * Presenta la identidad, valores y datos de contacto de la empresa.
- * Usa el componente InfoCard para mostrar las secciones de contenido.
- *
- * Estructura de la página:
- *   1. Hero naranja   — Título, descripción y botones de acción
- *   2. Misión y Visión — 2 InfoCards con accent (fondo naranja suave)
- *   3. Estadísticas   — Barra naranja con 4 métricas clave de la empresa
- *                       (única página donde aparece esta barra de stats)
- *   4. Valores        — 3 InfoCards: Seguridad, Integridad, Compromiso
- *   5. Contacto y Términos — 2 InfoCards finales
  */
+import { useEffect, useState } from "react";
 import Card from "../../components/InfoCard";
-import { Globe, Mail, Shield, Heart, Star, Plane, Target, FileText, Users, MapPin, Trophy } from "lucide-react";
+import { Mail, Shield, Heart, Star, Plane, Target, FileText, Users, MapPin, Trophy, Award, Globe2, BadgeCheck } from "lucide-react";
+import StatsService, { formatearMiles } from "../../infrastructure/services/stats.service";
+import type { StatsPublicas } from "../../infrastructure/services/stats.service";
 
-const stats = [
-  { valor: "+250", label: "Viajes realizados", icon: Plane },
-  { valor: "+1,500", label: "Personas que han viajado", icon: Users },
-  { valor: "+45", label: "Ciudades visitadas", icon: MapPin },
-  { valor: "98%", label: "Clientes satisfechos", icon: Trophy },
+const certificaciones = [
+  { icon: BadgeCheck, label: "Certificación IATA",            desc: "Operador acreditado" },
+  { icon: Award,      label: "Premio TripAdvisor 2024",       desc: "Excelencia en servicio" },
+  { icon: Globe2,     label: "Miembro SkyTeam Travel",        desc: "Red global de aerolíneas" },
 ];
 
 export default function AboutTravelPage() {
+  const [stats, setStats] = useState<StatsPublicas | null>(null);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    StatsService.obtener()
+      .then(setStats)
+      .finally(() => setCargando(false));
+  }, []);
+
+  const items = [
+    { valor: stats ? `+${formatearMiles(stats.viajes_realizados)}`  : null, label: "Reservas gestionadas",  icon: Plane },
+    { valor: stats ? `+${formatearMiles(stats.personas_viajeras)}`  : null, label: "Clientes atendidos",    icon: Users },
+    { valor: stats ? `+${stats.ciudades_visitadas}`                 : null, label: "Destinos en cartera",   icon: MapPin },
+    { valor: stats ? `${stats.satisfaccion}%`                       : null, label: "Índice de satisfacción", icon: Trophy },
+  ];
+
   return (
     <div className="bg-white">
 
-      {/* ── Hero ── */}
-      <header className="relative bg-orange-600 text-white py-20 px-6 overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-white/10" />
-        <div className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full bg-white/10" />
-
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 items-center relative z-10">
-          <div>
-            <span className="inline-block rounded-full bg-white/20 px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-4">
-              Nuestra historia
-            </span>
-            <h1 className="text-4xl font-black mb-4 leading-tight">
-              Explora el mundo<br />con nosotros
-            </h1>
-            <p className="text-orange-100 text-base leading-relaxed max-w-md">
-              Creamos experiencias de viaje inolvidables para aventureros, familias y empresas que desean descubrir nuevos destinos con total confianza.
-            </p>
-            <div className="flex gap-3 mt-7">
-              <a href="/destinos" className="rounded-xl bg-white text-orange-600 px-5 py-2.5 text-sm font-bold hover:bg-orange-50 transition shadow-md">
-                Ver destinos
-              </a>
-              <a href="#contacto" className="rounded-xl border-2 border-white/50 text-white px-5 py-2.5 text-sm font-bold hover:bg-white/15 transition">
-                Contáctanos
-              </a>
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <div className="flex items-center justify-center w-44 h-44 rounded-3xl bg-white/20 backdrop-blur-sm ring-2 ring-white/30 shadow-2xl">
-              <Globe size={90} className="text-white opacity-90" strokeWidth={1.2} />
-            </div>
+      {/* ── Intro corporativa ── */}
+      <section className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <span className="text-xs uppercase tracking-[0.2em] text-orange-600 font-semibold">Quiénes somos</span>
+          <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 leading-[1.1] tracking-tight mt-3">
+            Una agencia comprometida con el<br />
+            <span className="text-orange-500 italic font-normal">viajero moderno</span>
+          </h2>
+          <p className="text-gray-600 text-base leading-relaxed max-w-md mt-5">
+            Fundada en 2014, TuViaje es una agencia de turismo internacional que diseña, opera y comercializa
+            paquetes de viaje a medida. Combinamos infraestructura tecnológica propia con un equipo de asesores
+            certificados para garantizar la trazabilidad de cada reserva, la transparencia tarifaria y la asistencia
+            permanente durante el desplazamiento del cliente.
+          </p>
+          <div className="flex gap-3 mt-8">
+            <a href="/destinos" className="rounded-full bg-orange-500 text-white px-6 py-2.5 text-sm font-medium hover:bg-orange-600 transition shadow-sm shadow-orange-500/20">
+              Ver catálogo
+            </a>
+            <a href="#contacto" className="rounded-full border border-orange-200 text-orange-600 px-6 py-2.5 text-sm font-medium hover:bg-orange-50 transition">
+              Contactar al equipo
+            </a>
           </div>
         </div>
-      </header>
+
+        <div className="hidden md:flex justify-center">
+          <div className="w-full max-w-sm aspect-square rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
+            <Plane className="w-16 h-16 text-white/90" strokeWidth={1.2} />
+          </div>
+        </div>
+      </section>
 
       {/* ── Misión y Visión ── */}
       <section className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-6">
         <Card
           icon={Target}
-          title="Nuestra Misión"
-          description="Brindar experiencias de viaje accesibles, seguras y memorables conectando a las personas con destinos únicos alrededor del mundo, con atención personalizada en cada paso del camino."
+          title="Misión"
+          description="Facilitar el acceso al turismo internacional mediante una operación segura, transparente y orientada al cliente, asegurando estándares profesionales en cada etapa del viaje: desde la planificación hasta el regreso."
           accent
         />
         <Card
           icon={Star}
-          title="Nuestra Visión"
-          description="Ser la agencia de viajes de referencia en Latinoamérica, reconocida por transformar sueños en experiencias reales, con innovación, confianza y pasión por el turismo responsable."
+          title="Visión"
+          description="Consolidarnos como agencia de referencia en Latinoamérica para el segmento de turismo internacional, distinguidos por la innovación tecnológica, la calidad operativa y un compromiso firme con el turismo responsable."
           accent
         />
       </section>
 
-      {/* ── Estadísticas ── */}
-      <section className="bg-orange-600 py-14 px-6">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
-          {stats.map(({ valor, label, icon: Icon }) => (
-            <div key={label} className="text-center text-white">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/20 mb-3">
-                <Icon className="w-6 h-6 text-white" strokeWidth={1.8} />
+      {/* ── Indicadores de gestión ── */}
+      <section className="bg-gradient-to-br from-orange-500 to-orange-600 py-14 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center text-white mb-10">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-orange-100">Resultados</span>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mt-2">Indicadores de gestión</h2>
+            <p className="text-orange-50 text-sm mt-2 max-w-md mx-auto">
+              Cifras consolidadas a partir de operaciones realizadas durante los últimos 12 meses.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {items.map(({ valor, label, icon: Icon }) => (
+              <div key={label} className="text-center text-white">
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/15 backdrop-blur-sm mb-3">
+                  <Icon className="w-5 h-5 text-white" strokeWidth={1.6} />
+                </div>
+                {cargando || valor === null ? (
+                  <div className="h-9 w-20 mx-auto rounded bg-white/20 animate-pulse" />
+                ) : (
+                  <p className="text-3xl font-semibold tracking-tight">{valor}</p>
+                )}
+                <p className="text-orange-50 text-xs mt-2 uppercase tracking-wider">{label}</p>
               </div>
-              <p className="text-3xl font-black">{valor}</p>
-              <p className="text-orange-100 text-sm mt-1">{label}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── Valores ── */}
-      <section className="py-16 px-6 bg-gray-50">
+      {/* ── Pilares operativos ── */}
+      <section className="py-20 px-6 bg-orange-50/40">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-10">
-            <span className="text-xs font-bold uppercase tracking-widest text-orange-500">Lo que nos define</span>
-            <h2 className="text-3xl font-black text-gray-900 mt-1">Nuestros Valores</h2>
+          <div className="text-center mb-12">
+            <span className="text-xs uppercase tracking-[0.2em] text-orange-600 font-semibold">Principios rectores</span>
+            <h2 className="text-3xl font-semibold text-gray-900 mt-2 tracking-tight">Pilares operativos</h2>
+            <p className="text-gray-500 text-sm mt-3 max-w-lg mx-auto">
+              Los valores que orientan nuestra operación diaria y la relación con cada uno de nuestros clientes.
+            </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             <Card
               icon={Shield}
-              title="Seguridad"
-              description="Priorizamos la seguridad de nuestros viajeros en cada destino y experiencia, con seguros y asistencia incluida."
+              title="Seguridad operacional"
+              description="Todos los paquetes incluyen pólizas de asistencia médica internacional y cobertura ante imprevistos. Operamos exclusivamente con proveedores auditados y certificados localmente."
             />
             <Card
               icon={Heart}
-              title="Integridad"
-              description="Mantenemos altos estándares de ética y honestidad en todas nuestras operaciones y con cada cliente."
+              title="Transparencia"
+              description="Tarifas finales sin cargos ocultos, condiciones claras de cancelación y un sistema de seguimiento online que permite consultar el estado de cualquier reserva en tiempo real."
             />
             <Card
               icon={Star}
-              title="Compromiso"
-              description="Nos comprometemos a ofrecer el mejor servicio y experiencia de viaje, superando las expectativas de cada cliente."
+              title="Excelencia en servicio"
+              description="Asesoría personalizada antes, durante y después del viaje. Tiempo medio de respuesta inferior a 30 minutos y soporte 24/7 los 365 días del año."
             />
           </div>
         </div>
       </section>
 
-      {/* ── Contacto y Términos ── */}
-      <section id="contacto" className="py-16 px-6">
+      {/* ── Certificaciones y reconocimientos ── */}
+      <section className="py-16 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <span className="text-xs uppercase tracking-[0.2em] text-orange-600 font-semibold">Acreditaciones</span>
+            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mt-2 tracking-tight">Certificaciones y reconocimientos</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {certificaciones.map(({ icon: Icon, label, desc }) => (
+              <div key={label} className="flex items-center gap-3 rounded-xl border border-orange-100 bg-white px-5 py-4">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-orange-100 text-orange-600 flex-shrink-0">
+                  <Icon className="w-5 h-5" strokeWidth={1.7} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{label}</p>
+                  <p className="text-xs text-gray-500">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Contacto y términos ── */}
+      <section id="contacto" className="py-20 px-6 border-t border-gray-100">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-6">
           <Card
             icon={Mail}
-            title="Contáctanos"
-            description="Estamos aquí para ayudarte con cualquier pregunta o solicitud. Escríbenos a soporte@tviaje.com o llámanos al +52 800 000 0000, disponibles de lunes a domingo."
+            title="Atención al cliente"
+            description="Para consultas comerciales, gestión de reservas o asistencia durante un viaje, escríbanos a soporte@tuviaje.com o comuníquese al +52 800 000 0000. Disponibilidad de lunes a domingo, 24 horas."
           />
           <Card
             icon={FileText}
-            title="Términos y Condiciones"
-            description="Consulta nuestros términos y condiciones para conocer las políticas de reserva, cancelación y uso de nuestros servicios. Tu tranquilidad es nuestra prioridad."
+            title="Términos y condiciones"
+            description="Consulte la documentación legal vigente para conocer las políticas de reserva, cancelación, modificación y reembolso. Operamos bajo normativa internacional de turismo y protección al consumidor."
           />
         </div>
       </section>

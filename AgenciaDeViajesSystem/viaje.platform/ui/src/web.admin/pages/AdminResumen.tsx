@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactElement } from "react";
 import { useNavigate } from "react-router";
 import {
   Plane, Users, ShoppingBag, DollarSign,
@@ -34,7 +34,7 @@ function BadgeEstado({ estado }: { estado: string }) {
     Pendiente:  "bg-amber-50 text-amber-700 border-amber-200",
     Cancelada:  "bg-red-50   text-red-700   border-red-200",
   };
-  const iconos: Record<string, JSX.Element> = {
+  const iconos: Record<string, ReactElement> = {
     Confirmada: <CheckCircle className="w-3 h-3" />,
     Pendiente:  <Clock       className="w-3 h-3" />,
     Cancelada:  <XCircle     className="w-3 h-3" />,

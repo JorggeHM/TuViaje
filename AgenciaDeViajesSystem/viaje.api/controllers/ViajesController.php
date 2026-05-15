@@ -12,7 +12,7 @@ class ViajesController {
         $model = new Viaje();
         $viaje = $model->findById($id);
 
-        if (!$viaje) {
+        if (!$viaje || $viaje['estado'] !== 'Activo') {
             Response::error('Viaje no encontrado', 404);
         }
 

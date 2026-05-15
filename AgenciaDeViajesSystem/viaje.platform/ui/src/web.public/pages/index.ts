@@ -16,3 +16,5 @@ export { default as AboutUSPage       } from "./AboutUs.tsx";
 export { default as Register          } from "./Register.tsx";
 export { default as ViajeDetallePage  } from "./ViajeDetalle.tsx";
 export { default as ExperienciasPage  } from "./Experiencias.tsx";
+export { default as PagoExitoPage     } from "./PagoExito.tsx";
+export { default as PagoCanceladoPage } from "./PagoCancelado.tsx";
