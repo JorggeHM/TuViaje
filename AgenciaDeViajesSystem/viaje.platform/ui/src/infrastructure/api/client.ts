@@ -7,11 +7,10 @@ const client = axios.create({
     headers: {
         'Content-Type': 'application/json'
     },
-    withCredentials: true // Necesario para que el navegador envíe cookies de sesión
+    withCredentials: true // Necesario para que el navegador envie cookies de sesion
 });
 
-// ── Interceptor de solicitudes ────────────────────────────────────────────────
-// Se ejecuta ANTES de cada petición HTTP.
+// Solicitudes
 // Si existe un token en localStorage, lo agrega al header Authorization.
 client.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
@@ -21,10 +20,9 @@ client.interceptors.request.use((config) => {
     return config;
 });
 
-// ── Interceptor de respuestas ─────────────────────────────────────────────────
-// Si el servidor devuelve 401 Y la petición no tiene skipAuthRedirect: true,
-// elimina el token y redirige al login. Usar skipAuthRedirect en llamadas
-// opcionales (ej: Nav dropdown) para no expulsar al usuario por error.
+// Respuestas
+// Si el servidor devuelve 401 Y la petición no tiene skipAuthRedirect es true,
+// elimina el token y redirige al login. 
 client.interceptors.response.use(
     (response) => response,
     (error) => {

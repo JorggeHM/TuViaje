@@ -2,19 +2,11 @@ import { useState, useEffect } from "react";
 import {
   Plus, Search, Pencil, Trash2, CheckSquare,
   X, ImageIcon, Calendar, DollarSign, Users, MapPin,
-  AlertTriangle, Loader2,
-  Shield, RefreshCw, BadgeCheck, MessageCircle, Plane, CheckCircle2, Clock, CreditCard,
+  AlertTriangle, Loader2, Upload,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import client from "../../infrastructure/api/client";
 
 type EstadoViaje = "Activo" | "Pausado" | "Finalizado";
-
-interface Garantia {
-  titulo: string;
-  desc:   string;
-  icon:   string;
-}
 
 interface Viaje {
   id:              number;
@@ -26,18 +18,12 @@ interface Viaje {
   end_date:        string;
   duracion_dias:   number;
   imagen_url:      string;
-  incluidos:       string[]   | null;
-  galeria:         string[]   | null;
-  garantias:       Garantia[] | null;
+  incluidos:       string[] | null;
+  galeria:         string[] | null;
+  max_personas:    number;
   estado:          EstadoViaje;
   total_ventas:    number;
 }
-
-/** Catálogo cerrado de íconos disponibles para garantías. */
-export const ICONOS_GARANTIA: Record<string, LucideIcon> = {
-  Shield, RefreshCw, BadgeCheck, MessageCircle, Plane, CheckCircle2, Clock, Users, CreditCard, MapPin,
-};
-const ICONOS_KEYS = Object.keys(ICONOS_GARANTIA);
 
 const FORM_VACIO = {
   titulo:    "",
@@ -48,10 +34,10 @@ const FORM_VACIO = {
   duracion:  "",
   precio:    "",
   plazas:    "",
-  estado:    "Activo" as EstadoViaje,
-  incluidos: "",   // texto multilinea (una por línea)
-  galeria:   "",   // texto multilinea (una URL por línea)
-  garantias: [] as Garantia[],
+  estado:      "Activo" as EstadoViaje,
+  max_personas: "2",
+  incluidos:   "",   // texto multilinea (una por línea)
+  galeria:     "",   // texto multilinea (una URL por línea)
 };
 
 function BadgeEstado({ estado }: { estado: EstadoViaje }) {
@@ -90,67 +76,46 @@ function Campo({ label, value, onChange, type = "text", placeholder, prefix }: {
   );
 }
 
-function EditorGarantias({
-  garantias, onChange,
-}: { garantias: Garantia[]; onChange: (g: Garantia[]) => void }) {
-  const agregar = () => onChange([...garantias, { titulo: "", desc: "", icon: ICONOS_KEYS[0] }]);
-  const quitar  = (i: number) => onChange(garantias.filter((_, idx) => idx !== i));
-  const actualizar = (i: number, patch: Partial<Garantia>) =>
-    onChange(garantias.map((g, idx) => idx === i ? { ...g, ...patch } : g));
 
+/** Selector imagen: URL o archivo local (base64). */
+function CampoImagen({ label, value, onChange }: {
+  label: string; value: string; onChange: (v: string) => void;
+}) {
+  const [modo, setModo] = useState<"url" | "archivo">("url");
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onChange(reader.result as string);
+    reader.readAsDataURL(file);
+    e.currentTarget.value = "";
+  };
   return (
-    <div className="space-y-3">
-      {garantias.length === 0 && (
-        <p className="text-xs text-gray-400 italic">Sin garantías cargadas. Si dejás esto vacío se mostrará el set genérico.</p>
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-semibold text-gray-700">{label}</label>
+        <div className="flex gap-0.5 bg-gray-100 rounded-full p-0.5">
+          {(["url", "archivo"] as const).map((m) => (
+            <button key={m} type="button" onClick={() => setModo(m)}
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold transition ${
+                modo === m ? "bg-white text-orange-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              }`}>{m === "url" ? "URL" : "Archivo"}</button>
+          ))}
+        </div>
+      </div>
+      {modo === "url" ? (
+        <input type="text" value={value.startsWith("data:") ? "" : value}
+          onChange={(e) => onChange(e.target.value)} placeholder="https://..."
+          className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition" />
+      ) : (
+        <label className="flex items-center gap-2 w-full rounded-xl border border-dashed border-gray-300 px-3 py-2.5 cursor-pointer hover:border-orange-400 hover:bg-orange-50/40 transition">
+          <Upload className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <span className={`text-xs ${value.startsWith("data:") ? "text-green-600" : "text-gray-400"}`}>
+            {value.startsWith("data:") ? "✓ Imagen cargada" : "Seleccionar PNG, JPG o WebP..."}
+          </span>
+          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleFile} />
+        </label>
       )}
-
-      {garantias.map((g, i) => {
-        const Icon = ICONOS_GARANTIA[g.icon] ?? Shield;
-        return (
-          <div key={i} className="rounded-xl border border-gray-200 p-3 space-y-2 bg-gray-50/40">
-            <div className="flex items-center gap-2">
-              <Icon className="w-4 h-4 text-orange-500 flex-shrink-0" />
-              <select
-                value={g.icon}
-                onChange={(e) => actualizar(i, { icon: e.target.value })}
-                className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 bg-white focus:outline-none focus:border-orange-400"
-              >
-                {ICONOS_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
-              </select>
-              <input
-                type="text"
-                value={g.titulo}
-                onChange={(e) => actualizar(i, { titulo: e.target.value })}
-                placeholder="Título"
-                className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:border-orange-400 bg-white"
-              />
-              <button
-                type="button"
-                onClick={() => quitar(i)}
-                className="p-1 rounded text-gray-400 hover:text-red-600 transition"
-                title="Quitar"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <input
-              type="text"
-              value={g.desc}
-              onChange={(e) => actualizar(i, { desc: e.target.value })}
-              placeholder="Descripción corta"
-              className="w-full rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:border-orange-400 bg-white"
-            />
-          </div>
-        );
-      })}
-
-      <button
-        type="button"
-        onClick={agregar}
-        className="w-full py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-orange-400 hover:text-orange-600 transition flex items-center justify-center gap-1.5"
-      >
-        <Plus className="w-3.5 h-3.5" /> Agregar garantía
-      </button>
     </div>
   );
 }
@@ -175,6 +140,19 @@ export default function AdminViajes() {
   const [guardando,     setGuardando]     = useState(false);
   const [error,         setError]         = useState<string | null>(null);
 
+  // Calcula duración automáticamente al cambiar las fechas
+  useEffect(() => {
+    if (form.salida && form.fin) {
+      const inicio = new Date(form.salida);
+      const fin    = new Date(form.fin);
+      const dias   = Math.max(0, Math.round((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)));
+      setForm((prev) => ({ ...prev, duracion: String(dias) }));
+    } else {
+      setForm((prev) => ({ ...prev, duracion: "" }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.salida, form.fin]);
+
   const cargarViajes = async () => {
     try {
       const res = await client.get("/api/admin/viajes");
@@ -196,7 +174,7 @@ export default function AdminViajes() {
   });
 
   const abrirModalCrear = () => {
-    setForm({ ...FORM_VACIO, garantias: [] });
+    setForm({ ...FORM_VACIO });
     setModoEditar(false);
     setViajeEditando(null);
     setModalAbierto(true);
@@ -214,8 +192,8 @@ export default function AdminViajes() {
       plazas:    String(v.available_seats),
       estado:    v.estado,
       incluidos: arrToLines(v.incluidos),
-      galeria:   arrToLines(v.galeria),
-      garantias: Array.isArray(v.garantias) ? v.garantias : [],
+      galeria:     arrToLines(v.galeria),
+      max_personas: String(v.max_personas ?? 2),
     });
     setModoEditar(true);
     setViajeEditando(v.id);
@@ -225,9 +203,6 @@ export default function AdminViajes() {
   const guardarViaje = async () => {
     if (!form.titulo || !form.destino || !form.salida || !form.fin) return;
     setGuardando(true);
-
-    // Normaliza garantías: si una entrada tiene título y descripción vacíos, se descarta.
-    const garantiasLimpias = form.garantias.filter((g) => g.titulo.trim() || g.desc.trim());
 
     const payload = {
       title:           form.titulo,
@@ -241,7 +216,7 @@ export default function AdminViajes() {
       estado:          form.estado,
       incluidos:       linesToArr(form.incluidos),
       galeria:         linesToArr(form.galeria),
-      garantias:       garantiasLimpias,
+      max_personas:    Number(form.max_personas),
     };
     try {
       if (modoEditar && viajeEditando !== null) {
@@ -457,7 +432,7 @@ export default function AdminViajes() {
                 <Campo label="Nombre del viaje *" value={form.titulo}  onChange={f("titulo")}  placeholder="Ej. Aventura en Cancún" />
                 <Campo label="Destino *"           value={form.destino} onChange={f("destino")} placeholder="Ej. Cancún, México" />
               </div>
-              <Campo label="URL de imagen principal" value={form.imagen} onChange={f("imagen")} placeholder="https://..." />
+              <CampoImagen label="Imagen principal" value={form.imagen} onChange={f("imagen")} />
               {form.imagen && (
                 <div className="w-full h-32 rounded-xl overflow-hidden bg-gray-100">
                   <img src={form.imagen} alt="Preview" className="w-full h-full object-cover"
@@ -469,11 +444,29 @@ export default function AdminViajes() {
                 <Campo label="Fecha de fin *"    value={form.fin}    onChange={f("fin")}    type="date" />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Campo label="Duración (días)"     value={form.duracion} onChange={f("duracion")} type="number" placeholder="7" />
+                {/* Duración calculada automáticamente */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Duración (días)</label>
+                  <div className="w-full rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 text-sm text-gray-500 select-none">
+                    {form.duracion ? `${form.duracion} día${form.duracion === "1" ? "" : "s"}` : <span className="text-gray-300 italic">Selecciona las fechas</span>}
+                  </div>
+                </div>
                 <Campo label="Precio por persona"  value={form.precio}   onChange={f("precio")}   type="number" placeholder="2500" prefix="$" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <Campo label="Plazas totales" value={form.plazas} onChange={f("plazas")} type="number" placeholder="20" />
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Máx. personas/reserva</label>
+                  <select
+                    value={form.max_personas}
+                    onChange={(e) => setForm((prev) => ({ ...prev, max_personas: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition bg-white"
+                  >
+                    {[1,2,3,4,5,6,8,10].map((n) => (
+                      <option key={n} value={n}>{n} persona{n > 1 ? "s" : ""}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Estado</label>
                   <select
@@ -488,7 +481,7 @@ export default function AdminViajes() {
                 </div>
               </div>
 
-              {/* ─── Contenido editable (incluidos / galería / garantías) ─── */}
+              {/* ─── Contenido editable (incluidos / galería) ─── */}
               <div className="pt-3 border-t border-gray-100">
                 <p className="text-xs font-semibold text-gray-700 mb-3">Contenido de la ficha</p>
 
@@ -519,14 +512,22 @@ export default function AdminViajes() {
                       className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition resize-none font-mono"
                     />
                     <p className="text-[10px] text-gray-400 mt-1">La imagen principal ya se muestra primero. Acá agregás miniaturas extras.</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Garantías destacadas</label>
-                    <EditorGarantias
-                      garantias={form.garantias}
-                      onChange={(g) => setForm((prev) => ({ ...prev, garantias: g }))}
-                    />
+                    <label className="mt-2 inline-flex items-center gap-1.5 text-xs text-orange-600 hover:text-orange-700 transition cursor-pointer">
+                      <Upload className="w-3.5 h-3.5" />
+                      Agregar imagen desde archivo
+                      <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            const url = reader.result as string;
+                            setForm((prev) => ({ ...prev, galeria: prev.galeria ? prev.galeria + "\n" + url : url }));
+                          };
+                          reader.readAsDataURL(file);
+                          e.currentTarget.value = "";
+                        }} />
+                    </label>
                   </div>
                 </div>
               </div>

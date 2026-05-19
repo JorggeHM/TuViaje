@@ -82,7 +82,7 @@ export default function ViajeDetalle() {
               precio:           v.price,
               cuposDisponibles: v.available_seats,
               totalAsientos:    v.available_seats + (v.total_ventas ?? 0),
-              personasPorViaje: 2,
+              personasPorViaje: v.max_personas ?? 2,
               imagenUrl:        v.imagen_url,
               fechaSalida:      v.start_date,
               duracionDias:     v.duracion_dias,

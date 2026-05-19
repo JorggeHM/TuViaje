@@ -18,8 +18,9 @@ const mensajesIniciales: Mensaje[] = [
   },
 ];
 
-const respuestaAutomatica =
-  "Gracias por tu mensaje. Nuestro equipo te responderá pronto.";
+// URL del webhook de n8n — define VITE_N8N_WEBHOOK_URL en tu .env
+const N8N_WEBHOOK_URL =
+  import.meta.env.VITE_N8N_WEBHOOK_URL ?? "";
 
 export default function ChatFloat() {
   const [abierto,   setAbierto]   = useState(false);
@@ -32,7 +33,7 @@ export default function ChatFloat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensajes, esperando]);
 
-  const enviar = () => {
+  const enviar = async () => {
     const texto = input.trim();
     if (!texto || esperando) return;
 
@@ -40,13 +41,36 @@ export default function ChatFloat() {
     setInput("");
     setEsperando(true);
 
-    setTimeout(() => {
+    try {
+      const res = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mensaje: texto }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      // n8n debe responder con { respuesta: "texto del bot" }
+      const respuestaBot =
+        data.respuesta ?? data.output ?? data.message ?? "No entendí tu mensaje, ¿puedes reformularlo?";
+
       setMensajes((prev) => [
         ...prev,
-        { id: Date.now() + 1, de: "bot", texto: respuestaAutomatica },
+        { id: Date.now() + 1, de: "bot", texto: respuestaBot },
       ]);
+    } catch {
+      setMensajes((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          de: "bot",
+          texto: "Hubo un problema al conectar con el asistente. Intenta de nuevo.",
+        },
+      ]);
+    } finally {
       setEsperando(false);
-    }, 900);
+    }
   };
 
   return (

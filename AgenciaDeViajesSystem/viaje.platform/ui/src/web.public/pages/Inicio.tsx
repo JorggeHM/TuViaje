@@ -151,7 +151,7 @@ function Inicio() {
                 precio={viaje.price}
                 cuposDisponibles={viaje.available_seats}
                 totalAsientos={viaje.available_seats + (viaje.total_ventas ?? 0)}
-                personasPorViaje={2}
+                personasPorViaje={viaje.max_personas ?? 2}
                 descripcionCorta={viaje.description}
                 fechaSalida={viaje.start_date}
                 duracionDias={viaje.duracion_dias}

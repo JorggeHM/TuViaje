@@ -13,6 +13,7 @@ export interface Viaje {
     destination: string;
     price: number;
     available_seats: number;
+    max_personas: number;
     total_ventas?: number;
     start_date: string;
     end_date: string;

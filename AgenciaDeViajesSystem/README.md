@@ -23,12 +23,12 @@ AgenciaDeViajesSystem/
 ### Público
 - **Catálogo de viajes** (`/destinos`) con filtros de precio, duración y orden.
 - **Detalle de viaje** (`/viaje/:id`) con galería, reserva con selector de personas, pago vía Stripe.
-- **Inicio** con destinos destacados aleatorios desde la API y estadísticas en vivo.
+- **Inicio** con destinos destacados aleatorios desde la API, **imágenes de portada dinámicas** (`/api/covers`) y estadísticas en vivo.
 - **Sobre nosotros** (`/nosotros`) con métricas reales (`/api/stats`).
-- **Experiencias** (`/experiencias`) — feed de testimonios con upload de imágenes (FormData, máx 5 MB, JPG/PNG/WEBP).
-- **Inicio de sesión y registro** con JWT.
+- **Experiencias** (`/experiencias`) — feed de testimonios con upload de imágenes (FormData, máx 5 MB, JPG/PNG/WEBP); el autor puede editar y eliminar las propias.
+- **Inicio de sesión y registro** con JWT y `AuthContext` (single source of truth, sin re-decodificar el JWT en cada componente).
 - **Recuperación de contraseña** end-to-end (`/forgot-password` → email con link → `/reset-password/:token`).
-- **Perfil** (`/perfil`): edición de datos, cambio de contraseña, mis reservas, mis favoritos.
+- **Perfil** (`/perfil`): edición de datos, cambio de contraseña, **subir/borrar avatar**, mis reservas, mis favoritos.
 - **Sistema de favoritos**: marcar/desmarcar viajes con persistencia en DB y rollback optimista.
 - **Pago con Stripe** (modo Test): el botón "Reservar" lleva a Stripe Checkout; la reserva queda en `Pendiente` hasta que el webhook la confirma. Páginas `/pago/exito` y `/pago/cancelado`. Ver [stripe.md](./stripe.md) para configuración.
 - **Emails transaccionales** best-effort: bienvenida al registrarse, confirmación de reserva tras pago exitoso, cancelación, link de reset de contraseña.
@@ -38,15 +38,18 @@ AgenciaDeViajesSystem/
 - **Viajes**: CRUD completo (crear/editar/finalizar/eliminar) con búsqueda y filtros por estado.
 - **Usuarios**: listar, activar/desactivar, eliminar.
 - **Reservas**: panel independiente con filtros por estado, cambio de estado inline (sincroniza cupos automáticamente en transiciones desde/hacia Cancelada), eliminar.
-- **Ventas**: tabla con filtros, gráfico de ingresos semanal, top destinos, cambio de estado.
+- **Ventas**: tabla con filtros, gráfico de ingresos semanal, top destinos, cambio de estado, **refund manual con confirmación** (procesa el reembolso en Stripe antes de tocar la BD).
 - **Experiencias**: moderación — ocultar/mostrar (sin borrar) o eliminar (también borra la imagen del filesystem).
+- **Covers**: CRUD de las imágenes del header público (URL, orden, visibilidad).
+- **Mantenimiento**: dispara manualmente el cleanup de reservas Pendiente abandonadas (`POST /api/admin/maintenance/cleanup-pendientes`).
 
 ### Arquitectura técnica destacada
 - **AuthContext** con hook `useAuth()` — single source of truth del usuario, sin re-leer `localStorage` en cada render.
 - **JWT** firmado con HS256, payload con `sub`, `email`, `name`, `rol`. `Middleware::auth` y `Middleware::adminOnly` protegen las rutas.
 - **Manejo atómico de cupos**: `decrementSeats` falla si dos usuarios compiten por el último cupo (UPDATE condicional).
-- **Webhook Stripe** con verificación HMAC-SHA256, idempotente.
-- **Tests**: backend 36 tests con framework propio (`tests/run_tests.php`); frontend 26 tests con Vitest.
+- **Webhook Stripe** con verificación HMAC-SHA256, idempotente, soporte multi-firma para rotación de secret.
+- **Cleanup job** CLI (`jobs/cleanup_pendientes.php`) que libera cupos de reservas Pendiente abandonadas; pensado para cron/Task Scheduler.
+- **Tests**: backend 47 tests con framework propio (`tests/run_tests.php`); frontend 26 tests con Vitest.
 
 ## Requisitos
 
@@ -64,13 +67,16 @@ AgenciaDeViajesSystem/
 mysql -u root -p < viaje.database/schema.sql
 ```
 
-Si ya tenés una BD desde versiones anteriores, correr las migraciones individuales que falten en `viaje.database/`:
-- `migration_add_rol.sql`
-- `migration_add_personas.sql`
-- `migration_password_resets.sql`
-- `migration_favoritos.sql`
-- `migration_experiencias_visible.sql`
-- `migration_stripe_sessions.sql`
+Si ya tenés una BD desde versiones anteriores, aplicar los bloques del archivo `viaje.database/migrations.sql` que falten. Cubren (en orden):
+- `rol` en `usuarios`
+- `personas` en `reservas`
+- tabla `password_resets`
+- tabla `favoritos`
+- `visible` en `experiencias`
+- `stripe_session_id` en `reservas`
+- tabla `cover_imagenes`
+- columnas JSON en `viajes` (`incluidos`, `galeria`, `garantias`)
+- `avatar_url` en `usuarios`
 
 ### 2. Backend
 
@@ -137,17 +143,21 @@ Ver [stripe.md](./stripe.md) — guía detallada con tarjetas de prueba.
 | PUT | `/api/auth/password` | Cambia contraseña (con la anterior) |
 | POST | `/api/auth/forgot-password` | Envía link de reset (responde 200 incluso si el email no existe) |
 | POST | `/api/auth/reset-password` | Cambia contraseña con token |
+| POST | `/api/auth/avatar` | Sube avatar (multipart) |
+| DELETE | `/api/auth/avatar` | Borra avatar y archivo del FS |
 
 ### Usuario autenticado
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/api/viajes` · `/api/viajes/{id}` | Listado / detalle público |
 | POST | `/api/reservas` | Crea reserva en `Pendiente` y devuelve URL de Stripe Checkout |
+| GET | `/api/reservas/status?session_id=...` | Devuelve `{id, estado}` (usado por `/pago/exito` y `/pago/cancelado` para polling) |
 | GET | `/api/auth/reservas` | Mis reservas |
-| PATCH | `/api/reservas/{id}` | Cancelar reserva propia |
+| PATCH | `/api/reservas/{id}` | Cancelar reserva propia (si está Confirmada, refund automático en Stripe) |
 | GET / POST / DELETE | `/api/favoritos` · `/api/favoritos/{viajeId}` · `/api/favoritos/ids` | Sistema de favoritos |
-| GET / POST / PATCH | `/api/experiencias` · `/api/experiencias/{id}/like` | Feed público + publicar |
+| GET / POST / PUT / DELETE / PATCH | `/api/experiencias` · `/api/experiencias/{id}` · `/api/experiencias/{id}/like` | Feed público + publicar/editar/eliminar propias |
 | GET | `/api/stats` | Métricas públicas (viajes realizados, viajeros, ciudades, satisfacción) |
+| GET | `/api/covers` | Imágenes visibles del header |
 
 ### Webhook
 | Método | Ruta | Descripción |
@@ -157,11 +167,13 @@ Ver [stripe.md](./stripe.md) — guía detallada con tarjetas de prueba.
 ### Admin
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET / POST / PUT / PATCH / DELETE | `/api/admin/viajes/...` | CRUD viajes |
+| GET / POST / PUT / PATCH / DELETE | `/api/admin/viajes/...` | CRUD viajes (incluye campos JSON `incluidos`, `galeria`, `garantias`) |
 | GET / PATCH / DELETE | `/api/admin/usuarios/...` | Gestión usuarios |
-| GET / PATCH / DELETE | `/api/admin/reservas/...` | Gestión reservas |
-| GET / PATCH | `/api/admin/ventas/...` | Reporte de ventas |
+| GET / PATCH / DELETE | `/api/admin/reservas/...` | Gestión reservas (sincroniza cupos automáticamente) |
+| GET / GET stats / PATCH / POST refund | `/api/admin/ventas/...` | Reporte de ventas + refund manual |
 | GET / PATCH / DELETE | `/api/admin/experiencias/...` | Moderación experiencias |
+| GET / POST / PATCH / DELETE | `/api/admin/covers/...` | CRUD imágenes del header |
+| POST | `/api/admin/maintenance/cleanup-pendientes` | Cancela reservas Pendiente viejas y libera cupos |
 
 ## Tarjetas de prueba (Stripe Test mode)
 

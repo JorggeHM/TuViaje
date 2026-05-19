@@ -101,3 +101,10 @@ ALTER TABLE viajes
 ALTER TABLE usuarios
   ADD COLUMN avatar_url VARCHAR(500) NULL
   AFTER rol;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 10) viajes.max_personas — máximo de viajeros por reserva (configurable por admin)
+-- ─────────────────────────────────────────────────────────────────────────────
+ALTER TABLE viajes
+  ADD COLUMN max_personas INT UNSIGNED NOT NULL DEFAULT 2
+  AFTER available_seats;

@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactElement } from "react";
 import {
   DollarSign, TrendingUp, ShoppingBag,
-  Clock, CheckCircle, XCircle, Search, X, Loader2, RotateCcw,
+  Clock, CheckCircle, XCircle, Search, X,
 } from "lucide-react";
 import client from "../../infrastructure/api/client";
 
@@ -69,9 +69,6 @@ export default function AdminVentas() {
   const [filtroEstado,  setFiltroEstado]  = useState("Todos");
   const [cargando,      setCargando]      = useState(true);
   const [error,         setError]         = useState<string | null>(null);
-  const [accionando,    setAccionando]    = useState<number | null>(null);
-  const [confirmRefund, setConfirmRefund] = useState<Venta | null>(null);
-  const [refundando,    setRefundando]    = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -85,35 +82,6 @@ export default function AdminVentas() {
       .catch(() => setError("No se pudieron cargar los datos de ventas."))
       .finally(() => setCargando(false));
   }, []);
-
-  const cambiarEstado = async (id: number, estado: string) => {
-    setAccionando(id);
-    try {
-      await client.patch(`/api/admin/ventas/${id}/estado`, { estado });
-      setVentas((prev) => prev.map((v) => v.id === id ? { ...v, estado } : v));
-      // Recargar stats
-      client.get("/api/admin/ventas/stats").then((r) => setStats(r.data.data ?? null));
-    } catch {
-      setError("No se pudo actualizar el estado.");
-    } finally {
-      setAccionando(null);
-    }
-  };
-
-  const refundar = async () => {
-    if (!confirmRefund) return;
-    setRefundando(true);
-    try {
-      await client.post(`/api/admin/ventas/${confirmRefund.id}/refund`);
-      setVentas((prev) => prev.map((v) => v.id === confirmRefund.id ? { ...v, estado: "Cancelada" } : v));
-      client.get("/api/admin/ventas/stats").then((r) => setStats(r.data.data ?? null));
-      setConfirmRefund(null);
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? "No se pudo procesar el reembolso.");
-    } finally {
-      setRefundando(false);
-    }
-  };
 
   const ventasFiltradas = ventas.filter((v) => {
     const match  = v.usuario_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -256,7 +224,6 @@ export default function AdminVentas() {
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Monto</th>
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Estado</th>
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden xl:table-cell">Fecha</th>
-                <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -285,45 +252,6 @@ export default function AdminVentas() {
                     <td className="px-5 py-3.5 text-xs text-gray-400 hidden xl:table-cell">
                       {new Date(v.fecha).toLocaleString("es-AR")}
                     </td>
-                    <td className="px-5 py-3.5">
-                      {accionando === v.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                      ) : v.estado === "Pendiente" ? (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => cambiarEstado(v.id, "Confirmada")}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-50 text-green-700 text-xs font-semibold border border-green-200 hover:bg-green-100 transition"
-                          >
-                            <CheckCircle className="w-3 h-3" /> Confirmar
-                          </button>
-                          <button
-                            onClick={() => cambiarEstado(v.id, "Cancelada")}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-semibold border border-red-200 hover:bg-red-100 transition"
-                          >
-                            <XCircle className="w-3 h-3" /> Cancelar
-                          </button>
-                        </div>
-                      ) : v.estado === "Confirmada" ? (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => setConfirmRefund(v)}
-                            title="Reembolsar al cliente vía Stripe"
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200 hover:bg-amber-100 transition"
-                          >
-                            <RotateCcw className="w-3 h-3" /> Reembolsar
-                          </button>
-                          <button
-                            onClick={() => cambiarEstado(v.id, "Cancelada")}
-                            title="Cancelar sin reembolso (Stripe queda intacto)"
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-semibold border border-red-200 hover:bg-red-100 transition"
-                          >
-                            <XCircle className="w-3 h-3" /> Cancelar
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
-                      )}
-                    </td>
                   </tr>
                 ))
               )}
@@ -334,50 +262,6 @@ export default function AdminVentas() {
           {ventasFiltradas.length} resultado{ventasFiltradas.length !== 1 ? "s" : ""}
         </div>
       </div>
-
-      {/* Modal de confirmación de reembolso */}
-      {confirmRefund && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                <RotateCcw className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-gray-900">Reembolsar venta #{confirmRefund.id}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{confirmRefund.usuario_nombre} · {confirmRefund.viaje_destino}</p>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4 mb-5 space-y-2 text-sm">
-              <p className="text-gray-700">
-                Se reembolsarán <span className="font-bold">${Number(confirmRefund.monto).toLocaleString()} MXN</span> al cliente vía Stripe.
-              </p>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                Esto cancela la venta y la reserva asociada, libera los cupos del viaje, y el dinero vuelve al método de pago original (puede tardar 5-10 días en aparecer en el extracto del cliente).
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmRefund(null)}
-                disabled={refundando}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={refundar}
-                disabled={refundando}
-                className="flex-1 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 transition flex items-center justify-center gap-2 disabled:opacity-70"
-              >
-                {refundando && <Loader2 className="w-4 h-4 animate-spin" />}
-                {refundando ? "Procesando..." : "Confirmar reembolso"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ interface Viaje {
   destination: string;
   price: number;
   available_seats: number;
+  max_personas: number;
   total_ventas: number;
   start_date: string;
   end_date: string;
@@ -200,7 +201,7 @@ const Destinos = () => {
                 precio={viaje.price}
                 cuposDisponibles={viaje.available_seats}
                 totalAsientos={viaje.available_seats + viaje.total_ventas}
-                personasPorViaje={2}
+                personasPorViaje={viaje.max_personas ?? 2}
                 descripcionCorta={viaje.description}
                 fechaSalida={viaje.start_date}
                 duracionDias={viaje.duracion_dias}

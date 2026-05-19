@@ -67,13 +67,14 @@ class Viaje {
     public function create(array $data): int {
         $stmt = $this->db->prepare(
             'INSERT INTO viajes (title, description, destination, price, available_seats,
-             start_date, end_date, duracion_dias, rating, imagen_url, incluidos, galeria, garantias, estado)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             start_date, end_date, duracion_dias, rating, imagen_url, max_personas, incluidos, galeria, garantias, estado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $data['title'], $data['description'] ?? null, $data['destination'],
             $data['price'], $data['available_seats'], $data['start_date'], $data['end_date'],
-            $data['duracion_dias'] ?? 0, $data['rating'] ?? 0, $data['imagen_url'] ?? null,
+        $data['duracion_dias'] ?? 0, $data['rating'] ?? 0, $data['imagen_url'] ?? null,
+            $data['max_personas'] ?? 2,
             $this->encodeJson($data['incluidos'] ?? null),
             $this->encodeJson($data['galeria']   ?? null),
             $this->encodeJson($data['garantias'] ?? null),
@@ -86,7 +87,7 @@ class Viaje {
         $fields = [];
         $values = [];
         $allowed = ['title','description','destination','price','available_seats',
-                    'start_date','end_date','duracion_dias','rating','imagen_url',
+                    'max_personas','start_date','end_date','duracion_dias','rating','imagen_url',
                     'incluidos','galeria','garantias','estado'];
 
         foreach ($allowed as $field) {
