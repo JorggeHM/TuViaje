@@ -1,14 +1,11 @@
 <?php
 
-/**
- * Mailer — envío de emails en texto plano.
- *
- * Si hay SMTP_HOST configurado en el entorno, usa un cliente SMTP custom
- * con sockets. Si no, cae al mail() nativo de PHP.
- *
- * Todos los métodos de envío son best-effort: devuelven false en caso de
- * fallo pero NUNCA propagan excepciones al código llamador.
- */
+
+ // Mailer — envío de emails en texto plano.
+
+ // Si hay SMTP_HOST configurado en el entorno, usa un cliente SMTP custom
+ // con sockets. Si no, cae al mail() nativo de PHP.
+
 class Mailer {
 
     public static function send(string $to, string $subject, string $body): bool {
@@ -37,9 +34,9 @@ class Mailer {
         return
             "Hola {$nombre},\n\n" .
             "¡Gracias por registrarte en TuViaje!\n\n" .
-            "Tu cuenta fue creada con éxito. Ya podés iniciar sesión y explorar\n" .
+            "Tu cuenta fue creada con éxito. Ya puedes iniciar sesión y explorar\n" .
             "nuestros destinos en {$appUrl}\n\n" .
-            "Si no fuiste vos quien creó esta cuenta, ignorá este mensaje.\n\n" .
+            "Si no fuiste tú quien creó esta cuenta, ignora este mensaje.\n\n" .
             "— El equipo de TuViaje\n";
     }
 
@@ -73,7 +70,7 @@ class Mailer {
             ($fin     ? "  Regreso: {$fin}\n"   : '') .
             "  Personas: {$personas}\n" .
             "  Total abonado: \$ {$monto}\n\n" .
-            "Podés ver tus reservas en cualquier momento desde tu perfil:\n" .
+            "Puedes ver tus reservas en cualquier momento desde tu perfil:\n" .
             "{$appUrl}/perfil\n\n" .
             "¡Buen viaje!\n\n" .
             "— El equipo de TuViaje\n";
@@ -99,8 +96,36 @@ class Mailer {
             "Confirmamos la cancelación de tu reserva #{$codigo} ({$titulo}).\n\n" .
             "Los cupos fueron liberados y, si aplica, el reintegro de \$ {$monto}\n" .
             "se procesará según el medio de pago original.\n\n" .
-            "Si no solicitaste esta cancelación, contactanos respondiendo a este mail.\n\n" .
-            "Podés explorar otros destinos en {$appUrl}\n\n" .
+            "Si no solicitaste esta cancelación, contáctanos respondiendo a este mail.\n\n" .
+            "Puedes explorar otros destinos en {$appUrl}\n\n" .
+            "— El equipo de TuViaje\n";
+    }
+
+    public static function sendReembolsoProcesado(string $name, string $email, array $reserva): bool {
+        return self::send(
+            $email,
+            'Reembolso procesado — TuViaje',
+            self::buildReembolsoProcesadoBody($name, $reserva)
+        );
+    }
+
+    public static function buildReembolsoProcesadoBody(string $name, array $reserva): string {
+        $nombre   = trim($name) !== '' ? $name : 'viajero';
+        $titulo   = $reserva['title']       ?? 'tu viaje';
+        $codigo   = $reserva['id'] ?? '';
+        $monto    = number_format((float) ($reserva['monto'] ?? 0), 2, ',', '.');
+        $appUrl   = self::appUrl();
+
+        return
+            "Hola {$nombre},\n\n" .
+            "Tu reembolso ha sido procesado correctamente.\n\n" .
+            "Detalles del reembolso:\n" .
+            "  Código de reserva: #{$codigo}\n" .
+            "  Viaje: {$titulo}\n" .
+            "  Monto reembolsado: \$ {$monto}\n\n" .
+            "El importe se acreditará en el mismo medio de pago dentro de unos días hábiles.\n\n" .
+            "Si tienes alguna pregunta, responde a este correo.\n\n" .
+            "Puedes revisar tus reservas o buscar otros destinos en {$appUrl}\n\n" .
             "— El equipo de TuViaje\n";
     }
 
@@ -120,9 +145,9 @@ class Mailer {
         return
             "Hola {$nombre},\n\n" .
             "Recibimos una solicitud para restablecer tu contraseña.\n" .
-            "Para crear una nueva, abrí el siguiente enlace (válido por 1 hora):\n\n" .
+            "Para crear una nueva, abre el siguiente enlace (válido por 1 hora):\n\n" .
             "{$link}\n\n" .
-            "Si no fuiste vos, ignorá este mensaje — tu contraseña no cambiará.\n\n" .
+            "Si no fuiste tú, ignora este mensaje — tu contraseña no cambiará.\n\n" .
             "— El equipo de TuViaje\n";
     }
 
@@ -137,7 +162,6 @@ class Mailer {
         return $ts ? date('d/m/Y', $ts) : (string) $raw;
     }
 
-    // ── mail() nativo ─────────────────────────────────────────────────────
 
     private static function sendNative(string $to, string $subject, string $body): bool {
         $from     = getenv('MAIL_FROM')      ?: 'no-reply@tuviaje.com';
@@ -157,7 +181,7 @@ class Mailer {
         return (bool) $ok;
     }
 
-    // ── Cliente SMTP con sockets ──────────────────────────────────────────
+    
 
     private static function sendSMTP(string $to, string $subject, string $body): bool {
         $host   = (string) getenv('SMTP_HOST');

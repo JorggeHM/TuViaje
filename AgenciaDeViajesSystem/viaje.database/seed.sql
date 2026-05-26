@@ -1,15 +1,9 @@
--- ─────────────────────────────────────────────────────────────────────────────
--- TuViaje — Datos de ejemplo (seed)
--- Contraseña para todos los usuarios: password123
--- Orden de inserción respeta las FKs:
---   usuarios → viajes → cover_imagenes → reservas → ventas → experiencias → favoritos
--- ─────────────────────────────────────────────────────────────────────────────
+
+-- PASS para todos los usuarios: password123
+
 
 USE tuviaje_db;
 
--- ─────────────────────────────────────────────────────────────────────────────
--- USUARIOS — 1 admin + 7 usuarios (mezcla activo/inactivo)
--- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO usuarios (name, email, password, rol, activo) VALUES
   ('Admin TuViaje',    'admin@tuviaje.com',       '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',   1),
   ('Ana García',       'ana.garcia@mail.com',     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'usuario', 1),
@@ -20,9 +14,6 @@ INSERT INTO usuarios (name, email, password, rol, activo) VALUES
   ('Mateo Rojas',      'mateo.rojas@mail.com',    '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'usuario', 0),
   ('Valentina López',  'vale.lopez@mail.com',     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'usuario', 1);
 
--- ─────────────────────────────────────────────────────────────────────────────
--- VIAJES — 12 destinos con incluidos/galeria/garantias en JSON
--- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO viajes (title, description, destination, price, available_seats, start_date, end_date, duracion_dias, rating, imagen_url, incluidos, galeria, garantias, estado) VALUES
   ('Cancún Todo Incluido',
    'Disfruta de las playas de arena blanca y el mar turquesa del Caribe mexicano con resort all-inclusive frente al mar.',
@@ -169,9 +160,7 @@ INSERT INTO viajes (title, description, destination, price, available_seats, sta
    JSON_ARRAY('Equipo de trekking incluido','Guías de montaña certificados','Seguro de aventura'),
    'Activo');
 
--- ─────────────────────────────────────────────────────────────────────────────
 -- COVER_IMAGENES — hero del público
--- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO cover_imagenes (url, orden, visible) VALUES
   ('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80', 1, 1),
   ('https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1600&q=80', 2, 1),
@@ -179,9 +168,6 @@ INSERT INTO cover_imagenes (url, orden, visible) VALUES
   ('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1600&q=80', 4, 1),
   ('https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1600&q=80', 5, 0);
 
--- ─────────────────────────────────────────────────────────────────────────────
--- RESERVAS — mezcla de estados, personas y stripe_session_id
--- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO reservas (usuario_id, viaje_id, fecha_reserva, estado, monto, personas, stripe_session_id) VALUES
   (2, 1, '2026-04-01 10:23:00', 'Confirmada', 4900.00,  2, 'cs_test_a1b2c3d4e5f6'),
   (3, 2, '2026-04-02 09:05:00', 'Confirmada', 1890.00,  1, 'cs_test_g7h8i9j0k1l2'),
@@ -192,9 +178,6 @@ INSERT INTO reservas (usuario_id, viaje_id, fecha_reserva, estado, monto, person
   (4, 3, '2026-04-25 08:47:00', 'Cancelada', 2200.00,  1,  NULL),
   (3, 12, '2026-04-28 12:09:00', 'Pendiente',  6900.00,  2,  NULL);
 
--- ─────────────────────────────────────────────────────────────────────────────
--- VENTAS — repartidas en varios meses para que el gráfico muestre variación
--- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO ventas (usuario_id, viaje_id, monto, estado, fecha) VALUES
   (2, 1,  2450.00, 'Confirmada', '2026-01-08 10:23:00'),
   (3, 2,  1890.00, 'Confirmada', '2026-01-22 09:05:00'),
@@ -212,9 +195,7 @@ INSERT INTO ventas (usuario_id, viaje_id, monto, estado, fecha) VALUES
   (4, 6,  4200.00, 'Confirmada', '2026-04-29 15:47:00'),
   (5, 7,  9000.00, 'Confirmada', '2026-05-06 18:10:00');
 
--- ─────────────────────────────────────────────────────────────────────────────
 -- EXPERIENCIAS — mezcla de ratings, con/sin imagen, algunas ocultas
--- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO experiencias (usuario_id, destino, rating, texto, fecha, likes, imagen, visible) VALUES
   (2, 'La Habana, Cuba', 5,
    '¡Este lugar es increíble! La música en cada esquina y la gente tan amable hacen de La Habana un destino único.',
@@ -261,9 +242,7 @@ INSERT INTO experiencias (usuario_id, destino, rating, texto, fecha, likes, imag
    'El hotel no estaba como en las fotos. Servicio al cliente lento.',
    '2026-05-03 21:18:00', 1, NULL, 0);
 
--- ─────────────────────────────────────────────────────────────────────────────
 -- FAVORITOS — usuarios que marcaron viajes
--- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO favoritos (usuario_id, viaje_id, created_at) VALUES
   (2, 1,  '2026-03-10 09:00:00'),
   (2, 6,  '2026-03-12 10:30:00'),

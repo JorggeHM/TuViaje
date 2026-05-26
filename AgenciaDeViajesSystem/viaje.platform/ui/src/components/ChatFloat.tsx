@@ -42,6 +42,10 @@ export default function ChatFloat() {
     setEsperando(true);
 
     try {
+      if (!N8N_WEBHOOK_URL) {
+        throw new Error("Webhook de n8n no configurado");
+      }
+
       const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,10 +54,38 @@ export default function ChatFloat() {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const data = await res.json();
-      // n8n debe responder con { respuesta: "texto del bot" }
+      let data: unknown;
+      try {
+        data = await res.json();
+      } catch {
+        data = await res.text();
+      }
+
+      const toText = (value: unknown): string | undefined => {
+        if (typeof value === "string") return value;
+        if (typeof value === "number") return String(value);
+        if (Array.isArray(value) && value.length > 0) return toText(value[0]);
+        if (typeof value === "object" && value !== null) {
+          const obj = value as Record<string, any>;
+          const candidate =
+            obj.respuesta ??
+            obj.output ??
+            obj.text ??
+            obj.message ??
+            obj.response ??
+            obj.json ??
+            obj.body ??
+            obj.data;
+          return toText(candidate);
+        }
+        return undefined;
+      };
+
+      const textoFinal = toText(data) ?? "";
+
       const respuestaBot =
-        data.respuesta ?? data.output ?? data.message ?? "No entendí tu mensaje, ¿puedes reformularlo?";
+        textoFinal.trim() ||
+        "No entendí tu mensaje, ¿puedes reformularlo?";
 
       setMensajes((prev) => [
         ...prev,

@@ -69,19 +69,40 @@ export default function AdminVentas() {
   const [filtroEstado,  setFiltroEstado]  = useState("Todos");
   const [cargando,      setCargando]      = useState(true);
   const [error,         setError]         = useState<string | null>(null);
+  const [refundingId,   setRefundingId]   = useState<number | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setError(null);
+      const [ventasRes, statsRes] = await Promise.all([
+        client.get("/api/admin/ventas"),
+        client.get("/api/admin/ventas/stats"),
+      ]);
+      setVentas(ventasRes.data.data ?? []);
+      setStats(statsRes.data.data ?? null);
+    } catch {
+      setError("No se pudieron cargar los datos de ventas.");
+    } finally {
+      setCargando(false);
+    }
+  };
 
   useEffect(() => {
-    Promise.all([
-      client.get("/api/admin/ventas"),
-      client.get("/api/admin/ventas/stats"),
-    ])
-      .then(([ventasRes, statsRes]) => {
-        setVentas(ventasRes.data.data ?? []);
-        setStats(statsRes.data.data ?? null);
-      })
-      .catch(() => setError("No se pudieron cargar los datos de ventas."))
-      .finally(() => setCargando(false));
+    fetchData();
   }, []);
+
+  const handleRefund = async (id: number) => {
+    if (!window.confirm("¿Confirmar el reembolso de esta venta?")) return;
+    setRefundingId(id);
+    try {
+      await client.post(`/api/admin/ventas/${id}/refund`);
+      await fetchData();
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? "No se pudo procesar el reembolso.");
+    } finally {
+      setRefundingId(null);
+    }
+  };
 
   const ventasFiltradas = ventas.filter((v) => {
     const match  = v.usuario_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -224,20 +245,21 @@ export default function AdminVentas() {
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Monto</th>
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Estado</th>
                 <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden xl:table-cell">Fecha</th>
+                <th className="px-5 py-3.5 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {cargando ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    <td colSpan={6} className="px-5 py-4">
+                    <td colSpan={7} className="px-5 py-4">
                       <div className="h-4 bg-gray-100 rounded animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : ventasFiltradas.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-gray-400">
                     No se encontraron ventas con ese filtro.
                   </td>
                 </tr>
@@ -251,6 +273,19 @@ export default function AdminVentas() {
                     <td className="px-5 py-3.5 hidden sm:table-cell"><BadgeEstado estado={v.estado} /></td>
                     <td className="px-5 py-3.5 text-xs text-gray-400 hidden xl:table-cell">
                       {new Date(v.fecha).toLocaleString("es-AR")}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      {v.estado === "Confirmada" ? (
+                        <button
+                          onClick={() => handleRefund(v.id)}
+                          disabled={refundingId === v.id}
+                          className="inline-flex items-center justify-center rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition disabled:cursor-not-allowed disabled:bg-red-300"
+                        >
+                          {refundingId === v.id ? "Reembolsando..." : "Reembolsar"}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400">-</span>
+                      )}
                     </td>
                   </tr>
                 ))

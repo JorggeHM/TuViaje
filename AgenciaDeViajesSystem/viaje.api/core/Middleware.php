@@ -14,7 +14,7 @@ class Middleware {
             Response::error($e->getMessage(), 401);
         }
 
-        // Revalidación contra BD: el JWT puede seguir siendo válido criptográficamente
+        // Revalidación contra BD: el JWT puede seguir siendo válido 
         // pero la cuenta haber sido desactivada o eliminada por el admin desde su emisión.
         $usuario = (new Usuario())->findById((int) ($payload['sub'] ?? 0));
         if (!$usuario) {

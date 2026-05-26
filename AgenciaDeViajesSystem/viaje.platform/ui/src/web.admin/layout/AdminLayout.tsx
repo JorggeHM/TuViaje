@@ -39,7 +39,6 @@ const NAV_ITEMS = [
   { to: "/admin",              label: "Resumen",      icon: LayoutDashboard, end: true  },
   { to: "/admin/viajes",       label: "Viajes",       icon: Plane,           end: false },
   { to: "/admin/usuarios",     label: "Usuarios",     icon: Users,           end: false },
-  { to: "/admin/reservas",     label: "Reservas",     icon: Receipt,         end: false },
   { to: "/admin/ventas",       label: "Ventas",       icon: TrendingUp,      end: false },
   { to: "/admin/experiencias", label: "Experiencias", icon: MessageSquare,   end: false },
   { to: "/admin/covers",       label: "Hero",         icon: ImageIcon,       end: false },
@@ -50,7 +49,6 @@ const TITULOS: Record<string, string> = {
   "/admin":              "Resumen general",
   "/admin/viajes":       "Gestión de viajes",
   "/admin/usuarios":     "Gestión de usuarios",
-  "/admin/reservas":     "Gestión de reservas",
   "/admin/ventas":       "Reporte de ventas",
   "/admin/experiencias": "Moderación de experiencias",
   "/admin/covers":       "Imágenes del header",
@@ -178,16 +176,6 @@ export default function AdminLayout() {
           {/* Título de la sección activa */}
           <h1 className="text-base font-bold text-gray-900 flex-1 truncate">{tituloPagina}</h1>
 
-          {/* Acciones del topbar */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block text-right">
-              <p className="text-xs font-bold text-gray-900 leading-tight">{adminUser?.name ?? "Admin"}</p>
-              <p className="text-[10px] text-gray-400 leading-tight">{adminUser?.email ?? ""}</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-white text-xs font-black">
-              {adminUser?.name?.slice(0, 2).toUpperCase() ?? "AD"}
-            </div>
-          </div>
         </header>
 
         {/* Contenido de la página activa (inyectado por React Router) */}

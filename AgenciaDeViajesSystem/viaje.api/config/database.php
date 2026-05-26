@@ -1,5 +1,5 @@
 <?php
-
+    //Conexion con db
 class Database {
     private static ?PDO $instance = null;
 

@@ -147,8 +147,8 @@ $router->delete('/api/admin/covers/{id}',                 [AdminCoversController
 
 // Admin — mantenimiento
 $router->post('/api/admin/maintenance/cleanup-pendientes', [AdminMaintenanceController::class, 'cleanupPendientes']);
+$router->delete('/api/admin/maintenance/pending-reservas', [AdminMaintenanceController::class, 'deletePendingReservations']);
 
-// ── Dispatch ──────────────────────────────────────────────────────────────────
 try {
     $router->dispatch($request);
 } catch (\Throwable $e) {

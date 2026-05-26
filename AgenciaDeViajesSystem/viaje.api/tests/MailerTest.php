@@ -78,3 +78,17 @@ TestRunner::describe('Mailer::send — comportamiento best-effort', function () 
         TestRunner::expect(is_bool($resultado))->toBeTrue();
     });
 });
+
+TestRunner::describe('Mailer::buildReembolsoProcesadoBody', function () {
+    TestRunner::it('incluye el monto y el código de reserva', function () {
+        $body = Mailer::buildReembolsoProcesadoBody('María', [
+            'id' => 123,
+            'title' => 'Viaje a Cancún',
+            'monto' => 14500.50,
+        ]);
+
+        TestRunner::expect($body)->toContain('Código de reserva: #123');
+        TestRunner::expect($body)->toContain('Viaje a Cancún');
+        TestRunner::expect($body)->toContain('Monto reembolsado: $ 14.500,50');
+    });
+});

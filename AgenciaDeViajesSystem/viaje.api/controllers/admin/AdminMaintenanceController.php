@@ -24,4 +24,15 @@ class AdminMaintenanceController {
             Response::error('Error al ejecutar cleanup: ' . $e->getMessage(), 500);
         }
     }
+
+    public static function deletePendingReservations(Request $request): void {
+        Middleware::adminOnly($request);
+
+        try {
+            $resultado = MaintenanceJobs::deleteAllPendingReservas();
+            Response::success($resultado, "Eliminadas {$resultado['procesadas']} reserva(s) pendientes");
+        } catch (\Throwable $e) {
+            Response::error('Error al eliminar reservas pendientes: ' . $e->getMessage(), 500);
+        }
+    }
 }

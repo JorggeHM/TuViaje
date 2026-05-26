@@ -19,7 +19,6 @@ import AdminViajes       from "./web.admin/pages/AdminViajes.tsx";
 import AdminUsuarios     from "./web.admin/pages/AdminUsuarios.tsx";
 import AdminVentas       from "./web.admin/pages/AdminVentas.tsx";
 import AdminExperiencias from "./web.admin/pages/AdminExperiencias.tsx";
-import AdminReservas     from "./web.admin/pages/AdminReservas.tsx";
 import AdminCovers       from "./web.admin/pages/AdminCovers.tsx";
 
 /**
@@ -76,7 +75,6 @@ const ApplicationRouter = (): JSX.Element => {
                     <Route index                 element={<AdminResumen/>}/>
                     <Route path={"viajes"}       element={<AdminViajes/>}/>
                     <Route path={"usuarios"}     element={<AdminUsuarios/>}/>
-                    <Route path={"reservas"}     element={<AdminReservas/>}/>
                     <Route path={"ventas"}       element={<AdminVentas/>}/>
                     <Route path={"experiencias"} element={<AdminExperiencias/>}/>
                     <Route path={"covers"}       element={<AdminCovers/>}/>

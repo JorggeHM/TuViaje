@@ -3,7 +3,6 @@
 class StripeWebhookController {
 
     public static function handle(Request $request): void {
-        // El webhook NO usa JWT; la auth es la firma HMAC del cuerpo crudo.
         $rawBody    = file_get_contents('php://input') ?: '';
         $sigHeader  = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
 

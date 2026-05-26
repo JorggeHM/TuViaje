@@ -18,7 +18,7 @@ class ReservasController {
         if ($viaje['estado'] !== 'Activo') Response::error('El viaje no está disponible');
         if ($viaje['available_seats'] < $personas) Response::error('No hay suficientes cupos disponibles');
 
-        // Decremento atómico: reserva los cupos mientras dure el checkout
+        // Decremento en reserva los cupos mientras dure el checkout
         if (!$viajeModel->decrementSeats($viajeId, $personas)) {
             Response::error('No hay cupos suficientes. Otro usuario los tomó en este momento.', 409);
         }

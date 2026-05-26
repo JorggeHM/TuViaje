@@ -1,26 +1,4 @@
 <?php
-
-/**
- * Stripe — Cliente mínimo para Checkout.
- *
- * Usa cURL contra la API REST de Stripe directamente — sin SDK ni
- * dependencias de Composer. Cubre los flujos que usa la app: crear
- * sesiones de Checkout, recuperar sesiones, crear reembolsos y verificar
- * firmas de webhooks entrantes.
- *
- * ┌─────────────────────────────────────────────────────────────────────┐
- * │  CONFIGURACIÓN — DÓNDE VA LA API KEY                                │
- * ├─────────────────────────────────────────────────────────────────────┤
- * │  Ambas variables se cargan desde viaje.api/.env                     │
- * │                                                                     │
- * │    STRIPE_SECRET_KEY=sk_test_...    ← dashboard.stripe.com/apikeys  │
- * │    STRIPE_WEBHOOK_SECRET=whsec_...  ← lo imprime `stripe listen`    │
- * │                                                                     │
- * │  Si STRIPE_SECRET_KEY está vacío, este helper LANZA RuntimeException│
- * │  al primer uso. Ver instrucciones detalladas en .env.example y      │
- * │  AgenciaDeViajesSystem/stripe.md                                    │
- * └─────────────────────────────────────────────────────────────────────┘
- */
 class Stripe {
 
     private const API_BASE = 'https://api.stripe.com/v1';

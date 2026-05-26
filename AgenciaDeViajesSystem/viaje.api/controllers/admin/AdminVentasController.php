@@ -76,11 +76,15 @@ class AdminVentasController {
             (int) ($reserva['personas'] ?? 1)
         );
 
-        Response::success(null, 'Reembolso procesado correctamente');
-    }
-
-    public static function updateEstado(Request $request): void {
-        Middleware::adminOnly($request);
+        $usuarioModel = new Usuario();
+        $usuario      = $usuarioModel->findById((int) $venta['usuario_id']);
+        if ($usuario) {
+            Mailer::sendReembolsoProcesado(
+                $usuario['name'],
+                $usuario['email'],
+                $reserva
+            );
+        }
 
         $id     = (int) ($request->params['id'] ?? 0);
         $estado = trim($request->body['estado'] ?? '');
