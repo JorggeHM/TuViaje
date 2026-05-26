@@ -370,7 +370,7 @@ export default function ViajeDetalle() {
                 <p className="text-orange-100 text-xs mt-1">por persona · IVA incluido</p>
               </div>
 
-              <div>
+              <div className="py-2">
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="text-gray-500">Disponibilidad</span>
                   <span className={cuposBajos ? "text-red-600" : "text-green-700"}>
@@ -442,7 +442,7 @@ export default function ViajeDetalle() {
                 <p className="text-sm text-gray-900 flex items-center gap-1">
                   TuViaje Oficial <BadgeCheck className="w-3.5 h-3.5 text-orange-500" />
                 </p>
-                <p className="text-xs text-gray-400">+1,500 viajes realizados</p>
+                <p className="text-xs text-gray-400">+500 viajes realizados</p>
               </div>
             </div>
           </div>

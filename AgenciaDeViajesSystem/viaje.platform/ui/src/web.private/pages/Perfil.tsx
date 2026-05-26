@@ -9,7 +9,7 @@ import AuthService from "../../infrastructure/services/auth.service";
 import FavoritosService, { type ViajeFavorito } from "../../infrastructure/services/favoritos.service";
 import client from "../../infrastructure/api/client";
 
-interface Reserva {
+interface Venta {
   id:          number;
   title:       string;
   destination: string;
@@ -96,14 +96,14 @@ export default function Perfil() {
     }
   };
 
-  const [reservas,        setReservas]        = useState<Reserva[]>([]);
-  const [cargandoReservas, setCargandoReservas] = useState(true);
+  const [ventas,        setVentas]        = useState<Venta[]>([]);
+  const [cargandoVentas, setCargandoVentas] = useState(true);
 
   useEffect(() => {
-    client.get("/api/auth/reservas")
-      .then((res) => setReservas(res.data.data ?? []))
+    client.get("/api/auth/ventas")
+      .then((res) => setVentas(res.data.data ?? []))
       .catch(() => {})
-      .finally(() => setCargandoReservas(false));
+      .finally(() => setCargandoVentas(false));
   }, []);
 
   const [favoritos,        setFavoritos]        = useState<ViajeFavorito[]>([]);
@@ -437,20 +437,20 @@ export default function Perfil() {
           )}
         </div>
 
-        {/* Mis reservas */}
+        {/* Mis viajes comprados */}
         <div className="bg-white rounded-xl border border-gray-100 p-6">
           <h2 className="text-base font-medium text-gray-900 mb-5 flex items-center gap-2 tracking-tight">
-            <Plane className="w-4 h-4 text-orange-500" strokeWidth={1.5} /> Mis reservas
+            <Plane className="w-4 h-4 text-orange-500" strokeWidth={1.5} /> Mis viajes comprados
           </h2>
 
-          {cargandoReservas ? (
+          {cargandoVentas ? (
             <div className="flex justify-center py-8">
               <Loader2 className="w-5 h-5 text-gray-300 animate-spin" />
             </div>
-          ) : reservas.length === 0 ? (
+          ) : ventas.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-gray-400">
-                Aún no tenés reservas.{" "}
+                Aún no tenés compras.{" "}
                 <a href="/destinos" className="text-orange-500 hover:underline">
                   Explorá destinos
                 </a>
@@ -458,29 +458,29 @@ export default function Perfil() {
             </div>
           ) : (
             <div className="space-y-2">
-              {reservas.map((r) => (
-                <div key={r.id} className="flex items-center gap-3 border border-gray-100 hover:border-gray-200 rounded-lg p-3 transition">
-                  {r.imagen_url ? (
-                    <img src={r.imagen_url} alt={r.title} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+              {ventas.map((v) => (
+                <div key={v.id} className="flex items-center gap-3 border border-gray-100 hover:border-gray-200 rounded-lg p-3 transition">
+                  {v.imagen_url ? (
+                    <img src={v.imagen_url} alt={v.title} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
                   ) : (
                     <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
                       <Plane className="w-4 h-4 text-gray-400" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{r.title}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{v.title}</p>
                     <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3" />{r.destination}
+                      <MapPin className="w-3 h-3" />{v.destination}
                     </p>
                     <p className="text-xs text-gray-400 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />{r.start_date}
+                      <Calendar className="w-3 h-3" />{v.start_date}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full border ${ESTADO_COLORES[r.estado] ?? ""}`}>
-                      {r.estado}
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full border ${ESTADO_COLORES[v.estado] ?? ""}`}>
+                      {v.estado}
                     </span>
-                    <span className="text-sm font-semibold text-gray-700">${Number(r.monto).toLocaleString()}</span>
+                    <span className="text-sm font-semibold text-gray-700">${Number(v.monto).toLocaleString()}</span>
                   </div>
                 </div>
               ))}

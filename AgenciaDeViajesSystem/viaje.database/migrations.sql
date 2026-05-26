@@ -108,3 +108,20 @@ ALTER TABLE usuarios
 ALTER TABLE viajes
   ADD COLUMN max_personas INT UNSIGNED NOT NULL DEFAULT 2
   AFTER available_seats;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 11) reservas.estado — cambiar default de 'Pendiente' a 'Confirmada'
+--     Las reservas ahora se crean automáticamente confirmadas al hacer la compra
+-- ─────────────────────────────────────────────────────────────────────────────
+ALTER TABLE reservas
+  MODIFY COLUMN estado ENUM('Pendiente','Confirmada','Cancelada') NOT NULL DEFAULT 'Confirmada';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 12) ventas — agregar personas y stripe_session_id para consolidar reservas
+-- ─────────────────────────────────────────────────────────────────────────────
+ALTER TABLE ventas
+  ADD COLUMN personas INT UNSIGNED NOT NULL DEFAULT 1 AFTER estado,
+  ADD COLUMN stripe_session_id VARCHAR(255) NULL AFTER personas;
+
+-- Crear índice para stripe_session_id en ventas
+CREATE INDEX idx_ventas_stripe ON ventas(stripe_session_id);

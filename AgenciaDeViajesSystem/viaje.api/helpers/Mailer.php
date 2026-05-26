@@ -11,7 +11,12 @@ class Mailer {
     public static function send(string $to, string $subject, string $body): bool {
         try {
             if (getenv('SMTP_HOST')) {
-                return self::sendSMTP($to, $subject, $body);
+                $sent = self::sendSMTP($to, $subject, $body);
+                if ($sent) {
+                    return true;
+                }
+                error_log('[Mailer] SMTP falló, intentando mail() nativo como fallback para: ' . $to);
+                return self::sendNative($to, $subject, $body);
             }
             return self::sendNative($to, $subject, $body);
         } catch (\Throwable $e) {

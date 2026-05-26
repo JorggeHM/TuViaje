@@ -55,7 +55,6 @@ require_once __DIR__ . '/controllers/admin/AdminViajesController.php';
 require_once __DIR__ . '/controllers/admin/AdminUsuariosController.php';
 require_once __DIR__ . '/controllers/admin/AdminVentasController.php';
 require_once __DIR__ . '/controllers/admin/AdminExperienciasController.php';
-require_once __DIR__ . '/controllers/admin/AdminReservasController.php';
 require_once __DIR__ . '/controllers/admin/AdminCoversController.php';
 require_once __DIR__ . '/controllers/admin/AdminMaintenanceController.php';
 
@@ -92,11 +91,11 @@ $router->get('/api/covers', [CoversController::class, 'index']);
 // Webhook Stripe (sin auth — verificación por firma HMAC)
 $router->post('/api/stripe/webhook', [StripeWebhookController::class, 'handle']);
 
-// Reservas
-$router->post( '/api/reservas',          [ReservasController::class, 'store']);
-$router->get(  '/api/reservas/status',   [ReservasController::class, 'status']);
-$router->get(  '/api/auth/reservas',     [ReservasController::class, 'misReservas']);
-$router->patch('/api/reservas/{id}',     [ReservasController::class, 'cancel']);
+// Reservas/Ventas (endpoint público para status de checkout)
+$router->post( '/api/ventas',          [ReservasController::class, 'store']);
+$router->get(  '/api/ventas/status',   [ReservasController::class, 'status']);
+$router->get(  '/api/auth/ventas',     [ReservasController::class, 'misReservas']);
+$router->patch('/api/ventas/{id}',     [ReservasController::class, 'cancel']);
 
 // Favoritos
 $router->get(   '/api/favoritos',              [FavoritosController::class, 'index']);
@@ -133,11 +132,6 @@ $router->post( '/api/admin/ventas/{id}/refund',  [AdminVentasController::class, 
 $router->get(   '/api/admin/experiencias',                [AdminExperienciasController::class, 'index']);
 $router->patch( '/api/admin/experiencias/{id}/visible',   [AdminExperienciasController::class, 'toggleVisible']);
 $router->delete('/api/admin/experiencias/{id}',           [AdminExperienciasController::class, 'destroy']);
-
-// Admin — reservas
-$router->get(   '/api/admin/reservas',                    [AdminReservasController::class, 'index']);
-$router->patch( '/api/admin/reservas/{id}/estado',        [AdminReservasController::class, 'updateEstado']);
-$router->delete('/api/admin/reservas/{id}',               [AdminReservasController::class, 'destroy']);
 
 // Admin — imágenes del header
 $router->get(   '/api/admin/covers',                      [AdminCoversController::class, 'index']);

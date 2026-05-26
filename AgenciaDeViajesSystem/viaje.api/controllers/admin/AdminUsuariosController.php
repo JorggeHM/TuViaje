@@ -29,26 +29,26 @@ class AdminUsuariosController {
             Response::error('Usuario no encontrado', 404);
         }
 
-        // El CASCADE en FK borra reservas/ventas, pero no devuelve cupos al viaje.
-        // Liberamos manualmente las plazas de cada reserva activa antes de eliminar.
-        $reservaModel = new Reserva();
+        // El CASCADE en FK borra ventas, pero no devuelve cupos al viaje.
+        // Liberamos manualmente las plazas de cada venta activa antes de eliminar.
+        $ventaModel = new Venta();
         $viajeModel   = new Viaje();
-        $reservasPagadas = 0;
-        foreach ($reservaModel->listActivasByUsuario($id) as $reserva) {
+        $ventasPagadas = 0;
+        foreach ($ventaModel->listActivasByUsuario($id) as $venta) {
             $viajeModel->incrementSeats(
-                (int) $reserva['viaje_id'],
-                (int) ($reserva['personas'] ?? 1)
+                (int) $venta['viaje_id'],
+                (int) ($venta['personas'] ?? 1)
             );
-            if (!empty($reserva['stripe_session_id'])) {
-                $reservasPagadas++;
+            if (!empty($venta['stripe_session_id'])) {
+                $ventasPagadas++;
             }
         }
 
         $model->delete($id);
 
         $msg = 'Usuario eliminado';
-        if ($reservasPagadas > 0) {
-            $msg .= " — atención: $reservasPagadas reserva(s) con pago Stripe activo se perdieron sin refund automático. Refundá manualmente desde el dashboard de Stripe.";
+        if ($ventasPagadas > 0) {
+            $msg .= " — atención: $ventasPagadas venta(s) con pago Stripe activo se perdieron sin refund automático. Refundá manualmente desde el dashboard de Stripe.";
         }
         Response::success(null, $msg);
     }

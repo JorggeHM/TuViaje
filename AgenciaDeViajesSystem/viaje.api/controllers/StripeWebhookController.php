@@ -17,83 +17,63 @@ class StripeWebhookController {
         $type   = (string) ($event['type'] ?? '');
         $object = $event['data']['object'] ?? [];
 
-        $reserva = self::resolveReserva($type, $object);
-        if (!$reserva) {
-            // Evento sin reserva asociada (otra integración o sesión desconocida) — ack y listo
+        $venta = self::resolveVenta($type, $object);
+        if (!$venta) {
+            // Evento sin venta asociada (otra integración o sesión desconocida) — ack y listo
             Response::success(null, 'ignored');
         }
 
-        $reservaId = (int) $reserva['id'];
+        $ventaId = (int) $venta['id'];
 
         switch ($type) {
             case 'checkout.session.completed':
-                self::confirmarReserva($reserva, $reservaId);
+                self::confirmarVenta($venta, $ventaId);
                 break;
 
             case 'checkout.session.expired':
             case 'checkout.session.async_payment_failed':
             case 'payment_intent.payment_failed':
-                self::cancelarReserva($reserva, $reservaId);
+                self::cancelarVenta($venta, $ventaId);
                 break;
         }
 
         Response::success(null, 'ok');
     }
 
-    /**
-     * Resuelve la reserva referenciada por el evento, según el tipo:
-     * - Eventos de checkout.session.* viajan con la session entera; usamos su `id`.
-     * - payment_intent.* viajan con el payment_intent; usamos `metadata.reserva_id`
-     *   que seteamos en ReservasController::store al crear la session.
-     */
-    private static function resolveReserva(string $type, array $object): ?array {
-        $reservaModel = new Reserva();
+    private static function resolveVenta(string $type, array $object): ?array {
+        $ventaModel = new Venta();
 
         if (str_starts_with($type, 'checkout.session.')) {
             $sessionId = (string) ($object['id'] ?? '');
-            return $sessionId === '' ? null : $reservaModel->findByStripeSessionId($sessionId);
+            return $sessionId === '' ? null : $ventaModel->findByStripeSessionId($sessionId);
         }
 
         if (str_starts_with($type, 'payment_intent.')) {
-            $reservaId = (int) ($object['metadata']['reserva_id'] ?? 0);
-            return $reservaId > 0 ? $reservaModel->findById($reservaId) : null;
+            $ventaId = (int) ($object['metadata']['venta_id'] ?? 0);
+            return $ventaId > 0 ? $ventaModel->findById($ventaId) : null;
         }
 
         return null;
     }
 
-    private static function confirmarReserva(array $reserva, int $reservaId): void {
-        if ($reserva['estado'] === 'Confirmada') return; // Idempotente: ya confirmada
-
-        $reservaModel = new Reserva();
-        $reservaModel->updateEstado($reservaId, 'Confirmada');
-
-        // Crear la venta vinculada (la antes-única-fuente de "ventas confirmadas")
-        $ventaModel = new Venta();
-        $ventaId    = $ventaModel->create(
-            (int) $reserva['usuario_id'],
-            (int) $reserva['viaje_id'],
-            (float) $reserva['monto']
-        );
-        $ventaModel->updateEstado($ventaId, 'Confirmada');
-
-        // Email best-effort
+    private static function confirmarVenta(array $venta, int $ventaId): void {
+        // La venta ya nace en Confirmada, así que aquí solo enviamos confirmación por email
         $usuarioModel = new Usuario();
-        $usuario      = $usuarioModel->findById((int) $reserva['usuario_id']);
+        $usuario      = $usuarioModel->findById((int) $venta['usuario_id']);
         if ($usuario) {
-            Mailer::sendReservaConfirmacion($usuario['name'], $usuario['email'], $reserva);
+            Mailer::sendVentaConfirmacion($usuario['name'], $usuario['email'], $venta);
         }
     }
 
-    private static function cancelarReserva(array $reserva, int $reservaId): void {
-        if ($reserva['estado'] === 'Cancelada') return; // Idempotente
+    private static function cancelarVenta(array $venta, int $ventaId): void {
+        if ($venta['estado'] === 'Cancelada') return; // Idempotente
 
-        $reservaModel = new Reserva();
-        $reservaModel->updateEstado($reservaId, 'Cancelada');
+        $ventaModel = new Venta();
+        $ventaModel->updateEstado($ventaId, 'Cancelada');
 
         // Liberar cupos que estaban reservados para este checkout
-        $personas   = (int) ($reserva['personas'] ?? 1);
+        $personas   = (int) ($venta['personas'] ?? 1);
         $viajeModel = new Viaje();
-        $viajeModel->incrementSeats((int) $reserva['viaje_id'], $personas);
+        $viajeModel->incrementSeats((int) $venta['viaje_id'], $personas);
     }
 }

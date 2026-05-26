@@ -31,17 +31,17 @@ class ReservasService {
      * (o cancelará) cuando Stripe envíe el webhook al backend.
      */
     static async crear(viajeId: number, personas: number): Promise<CheckoutResponse> {
-        const res = await client.post('/api/reservas', { viaje_id: viajeId, personas });
+        const res = await client.post('/api/ventas', { viaje_id: viajeId, personas });
         return res.data.data;
     }
 
     static async misReservas(): Promise<Reserva[]> {
-        const res = await client.get('/api/auth/reservas');
+        const res = await client.get('/api/auth/ventas');
         return res.data.data ?? [];
     }
 
     static async cancelar(id: number): Promise<void> {
-        await client.patch(`/api/reservas/${id}`);
+        await client.patch(`/api/ventas/${id}`);
     }
 
     /**
@@ -51,7 +51,7 @@ class ReservasService {
      */
     static async estadoPorSesion(sessionId: string): Promise<ReservaStatus> {
         const res = await client.get(
-            `/api/reservas/status?session_id=${encodeURIComponent(sessionId)}`,
+            `/api/ventas/status?session_id=${encodeURIComponent(sessionId)}`,
             { skipAuthRedirect: true } as object,
         );
         return res.data.data;

@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS reservas (
   usuario_id        INT UNSIGNED    NOT NULL,
   viaje_id          INT UNSIGNED    NOT NULL,
   fecha_reserva     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  estado            ENUM('Pendiente','Confirmada','Cancelada') NOT NULL DEFAULT 'Pendiente',
+  estado            ENUM('Pendiente','Confirmada','Cancelada') NOT NULL DEFAULT 'Confirmada',
   monto             DECIMAL(10,2)   NOT NULL,
   personas          INT UNSIGNED    NOT NULL DEFAULT 1,
   stripe_session_id VARCHAR(255)    NULL,
@@ -50,12 +50,14 @@ CREATE TABLE IF NOT EXISTS reservas (
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS ventas (
-  id          INT UNSIGNED    AUTO_INCREMENT PRIMARY KEY,
-  usuario_id  INT UNSIGNED    NOT NULL,
-  viaje_id    INT UNSIGNED    NOT NULL,
-  monto       DECIMAL(10,2)   NOT NULL,
-  estado      ENUM('Confirmada','Pendiente','Cancelada') NOT NULL DEFAULT 'Confirmada',
-  fecha       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  id                INT UNSIGNED    AUTO_INCREMENT PRIMARY KEY,
+  usuario_id        INT UNSIGNED    NOT NULL,
+  viaje_id          INT UNSIGNED    NOT NULL,
+  monto             DECIMAL(10,2)   NOT NULL,
+  estado            ENUM('Confirmada','Pendiente','Cancelada') NOT NULL DEFAULT 'Confirmada',
+  personas          INT UNSIGNED    NOT NULL DEFAULT 1,
+  stripe_session_id VARCHAR(255)    NULL,
+  fecha             DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
   FOREIGN KEY (viaje_id)   REFERENCES viajes(id)   ON DELETE CASCADE
 ) ENGINE=InnoDB;

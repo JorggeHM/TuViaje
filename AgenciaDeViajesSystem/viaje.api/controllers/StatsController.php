@@ -9,13 +9,12 @@ class StatsController {
             "SELECT COUNT(*) FROM ventas WHERE estado = 'Confirmada'"
         )->fetchColumn();
 
-        // Personas que han viajado = suma de personas en reservas confirmadas
+        // Personas que han viajado = suma de personas en ventas confirmadas
         $personasViajeras = (int) $db->query(
-            "SELECT COALESCE(SUM(personas), 0) FROM reservas WHERE estado = 'Confirmada'"
+            "SELECT COALESCE(SUM(personas), 0) FROM ventas WHERE estado = 'Confirmada'"
         )->fetchColumn();
 
-        // Ciudades visitadas = destinos distintos del catálogo Activo (los Pausados/Finalizados
-        // no se ofrecen al público, por lo tanto no cuentan como destinos en cartera).
+        // Ciudades visitadas = destinos distintos del catálogo Activo
         $ciudadesVisitadas = (int) $db->query(
             "SELECT COUNT(DISTINCT destination) FROM viajes WHERE estado = 'Activo'"
         )->fetchColumn();
